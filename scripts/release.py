@@ -98,7 +98,7 @@ def plan_release(current_version, latest_tag, commit_messages, changed_paths):
 
 
 def release_lines(messages):
-    lines = []
+    release_notes = []
     seen = set()
     for message in messages:
         lines = message.splitlines()
@@ -108,8 +108,8 @@ def release_lines(messages):
         if not first_line or is_release_commit(first_line) or first_line in seen:
             continue
         seen.add(first_line)
-        lines.append(f"- {first_line}")
-    return "\n".join(lines) if lines else "- Automated release."
+        release_notes.append(f"- {first_line}")
+    return "\n".join(release_notes) if release_notes else "- Automated release."
 
 
 def update_changelog(changelog, version, release_date, messages):

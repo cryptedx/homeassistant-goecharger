@@ -67,6 +67,25 @@ class ReleasePlannerTests(unittest.TestCase):
         self.assertIn("## Unreleased\n\n## 0.27.2 - 2026-06-24\n\n- Keep this note.", updated)
         self.assertIn("## 0.27.1 - 2026-06-24", updated)
 
+    def test_empty_unreleased_uses_commit_subjects(self):
+        changelog = """# Changelog
+
+## Unreleased
+
+## 0.27.1 - 2026-06-24
+
+- Previous release.
+"""
+
+        updated = release_script.update_changelog(
+            changelog,
+            "0.27.2",
+            "2026-06-24",
+            ["fix: read charger status", "docs: clarify setup"],
+        )
+
+        self.assertIn("- fix: read charger status\n- docs: clarify setup", updated)
+
 
 if __name__ == "__main__":
     unittest.main()
