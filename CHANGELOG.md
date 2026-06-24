@@ -5,6 +5,11 @@ Version numbers follow SemVer 2.0.0. The installable integration version lives i
 
 ## Unreleased
 
+## 0.29.0 - 2026-06-24
+
+- feat: add selectable go-eCharger API v2 backend
+- Handle failed goecharger updates gracefully
+
 ## 0.28.0 - 2026-06-24
 
 - Added selectable local API v2 support while keeping API v1 as the default.
