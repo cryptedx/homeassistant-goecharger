@@ -7,7 +7,7 @@ from homeassistant import core, config_entries
 
 from goecharger import GoeCharger
 
-from .const import DOMAIN, CONF_CHARGERS, CONF_NAME, CHARGER_API
+from .const import DOMAIN, CONF_CHARGERS, CONF_NAME, CHARGER_API, charger_entity_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ async def async_setup_entry(
             hass.data[DOMAIN]["coordinator"],
             hass,
             chargerApi,
-            f"switch.goecharger_{chargerName}_{attribute}",
+            charger_entity_id("switch", chargerName, attribute),
             chargerName,
             "Charging allowed",
             attribute,
@@ -63,7 +63,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 hass.data[DOMAIN]["coordinator"],
                 hass,
                 chargerApi[chargerName],
-                f"switch.goecharger_{chargerName}_{attribute}",
+                charger_entity_id("switch", chargerName, attribute),
                 chargerName,
                 "Charging allowed",
                 attribute,

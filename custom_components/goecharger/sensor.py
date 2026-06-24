@@ -14,7 +14,7 @@ from homeassistant.components.sensor import (
 )
 
 
-from .const import CONF_CHARGERS, DOMAIN, CONF_NAME, CONF_CORRECTION_FACTOR
+from .const import CONF_CHARGERS, DOMAIN, CONF_NAME, CONF_CORRECTION_FACTOR, charger_entity_id
 
 AMPERE = 'A'
 VOLT = 'V'
@@ -141,7 +141,7 @@ def _create_sensors_for_charger(chargerName, hass, correctionFactor):
         entities.append(
             GoeChargerSensor(
                 hass.data[DOMAIN]["coordinator"],
-                f"sensor.goecharger_{chargerName}_{sensor}",
+                charger_entity_id("sensor", chargerName, sensor),
                 chargerName, sensorName, sensor, sensorUnit, sensorStateClass, sensorDeviceClass, correctionFactor
             )
         )
