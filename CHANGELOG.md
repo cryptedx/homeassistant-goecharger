@@ -5,6 +5,10 @@ Version numbers follow SemVer 2.0.0. The installable integration version lives i
 
 ## Unreleased
 
+## 0.27.3 - 2026-06-24
+
+- Clean up translations and update checkout action
+
 ## 0.27.2 - 2026-06-24
 
 - Added repository versioning policy, changelog, and versioning checks.
