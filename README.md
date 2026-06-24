@@ -1,177 +1,184 @@
-# Home Assistant integration for the go-eCharger (WIP)
+# GoAmpLocal
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
 [![Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cryptedx&repository=homeassistant-goecharger&category=integration)
 [![Validate with hassfest](https://github.com/cryptedx/homeassistant-goecharger/actions/workflows/hassfest.yaml/badge.svg?branch=main)](https://github.com/cryptedx/homeassistant-goecharger/actions/workflows/hassfest.yaml)
 
-Integration for Homeassistant to view and control the go-eCharger for electric vehicles via the local IP interface. API v1 remains the default; API v2 can be selected per charger for newer local controls.
+GoAmpLocal is a maintained Home Assistant custom integration for controlling
+compatible go-e chargers over the local network.
 
-## Personal fork
+It is based on the original `cathiele/homeassistant-goecharger` project and has
+been refreshed with selectable local API v2 support while keeping API v1 as a
+fallback for existing installations.
 
-This is a personal fork of the original `cathiele/homeassistant-goecharger` integration. The upstream project has not published a release since June 2025, and I use this integration myself, so I am fixing bugs here in my spare time as far as possible. This is not an official takeover of the original project.
+This project is not affiliated with go-e GmbH and is not an official takeover of
+the original upstream project. The Home Assistant integration domain remains
+`goecharger` for compatibility.
 
 ## Features
-- attributes from charger available as sensors
-- switch to turn off/on charger
-- set charge limit in kWh (0.1 kWh steps)
-- set max current for charging in ampere (6-32A)
-- set absolute maximum current for charging (max can not be set higher than "absolute max")
-- API v2 number/select/switch entities for core charger controls
-- expert service to write arbitrary API v2 keys
-- no cloud connection needed to control the charger - only local ip-access needed.
-- correction factor for older devices which often present 5-10% lower voltage and therefore energy values
 
-## API version
+- Local polling and control; no cloud connection required for charger control.
+- API v2 support for newer chargers, selectable per charger.
+- API v1 fallback for existing setups.
+- Sensors for charger status, current, voltage, power, temperature, energy, and
+  selected API v2 values.
+- Switch, number, and select entities for common API v2 controls.
+- Expert `goecharger.set_api_key` service for API v2 keys that do not need a
+  dedicated entity.
+- Optional correction factor for older devices that report slightly low voltage
+  and energy values.
 
-The integration supports local API v1 and API v2. Existing installations keep API v1 unless you switch the charger to API v2 in the integration options.
+## Installation
 
-Use API v2 for newer chargers or when you want the v2-native controls. Enable the local HTTP API v2 in the go-e app first.
+### HACS
 
-Curated API v2 controls are exposed as Home Assistant `number`, `select`, and `switch` entities. For advanced keys that do not deserve their own entity, use the `goecharger.set_api_key` service with `charger_name`, `key`, and a JSON-compatible `value`.
+Use the My Home Assistant button above, or add this repository in HACS and
+install the integration from there.
 
-# Warning: WIP - Breaking changes possible
-This is the first version of the Integration so there are still breaking changes possible.
+### Manual
 
-# Installation
+Copy `custom_components/goecharger` into your Home Assistant
+`custom_components` directory and restart Home Assistant.
 
-## HACS
-
-Click the My Home Assistant button above to open this repository directly in HACS, then install the integration from there.
-
-## Manual
-
-- clone this repository
-```
-git clone https://github.com/cryptedx/homeassistant-goecharger.git
-```
-- copy the content of the `custom_components`-Folder to the `custom_components` folder of your home-assistant installation
-
-```
-# mkdir -p <your-ha-config-dir>/custom_components
-# cp -r custom_components/goecharger <your-ha-config-dir>/custom_components
+```bash
+mkdir -p <your-ha-config-dir>/custom_components
+cp -r custom_components/goecharger <your-ha-config-dir>/custom_components/
 ```
 
-* setup your Charger in the `configuration.yaml` (for always connected chargers):
+## Configuration
+
+For new setups, add the integration through Home Assistant:
+
+`Settings -> Devices & services -> Add integration -> go-eCharger`
+
+Enable the local HTTP API v2 in the go-e app first if you want to use API v2
+controls. Existing installations without an `api_version` setting keep API v1.
+
+YAML configuration is still supported:
 
 ```yaml
 goecharger:
   chargers:
     - name: charger1
-      host: <ip of your charger>
+      host: 192.0.2.10
       api_version: v2
     - name: charger2
-      host: <ip or hostname of charger 2>
+      host: charger2.local
       api_version: v1
-      correction_factor: factor for correction for total and session charged 
+      correction_factor: 1.05
 ```
 
-# Sample View
-![screenshot of Home Assistant](doc/ha_entity_view.png)
+## API v2 Controls
 
-# Example Config
+API v2 exposes curated Home Assistant entities instead of one entity per raw API
+key:
 
-## `configuration.yaml`
+- `number`: requested current, absolute max current, charge limit, minimum
+  charging current, grid target power, and related tuning values.
+- `select`: force state, cable lock mode, logic mode, access control, and phase
+  wish mode.
+- `switch`: charging allowed, PV surplus, Awattar, zero feed-in, and selected
+  simulation switches.
+
+For advanced keys, call the expert service:
 
 ```yaml
-input_number:
-  goecharger_charge_limit:
-    name: Charge limit (kWh)
-    min: 0
-    max: 10
-    step: 1
-
-input_select:
-  goecharger_max_current:
-    name: Max current
-    options:
-      - 6
-      - 10
-      - 16
-      - 20
-      - 24
-      - 32
+action: goecharger.set_api_key
+data:
+  charger_name: charger1
+  key: fup
+  value: true
 ```
 
-## `automations.yaml`
+## Generic BEV Automation Template
 
-**Important: Replace `111111` with your chargers name.**
+Create an `input_select.ev_charging_mode` helper with these options:
+
+- `Off`
+- `Immediate`
+- `PV surplus`
+
+Then adapt the placeholder entity IDs to your charger name. This example assumes
+the charger is named `charger1`.
 
 ```yaml
-- id: '1576914483212'
-  alias: 'goecharger: set max current on charger based on input select'
-  description: ''
-  trigger:
-  - entity_id: input_select.goecharger_max_current
-    platform: state
-  condition: []
-  action:
-  - data_template:
-      max_current: '{{ states(''input_select.goecharger_max_current'') }}'
-    service: goecharger.set_max_current
-- id: '1576915266692'
-  alias: 'goecharger: set max_current input_select based on charger value'
-  description: ''
-  trigger:
-  - entity_id: sensor.goecharger_111111_charger_max_current
-    platform: state
-  condition: []
-  action:
-  - data_template:
-      entity_id: input_select.goecharger_max_current
-      option: '{{ states.sensor.goecharger_111111_charger_max_current.state }}'
-    service: input_select.select_option
-- id: '1577036409850'
-  alias: 'goecharger: set charge limit based on input'
-  description: ''
-  trigger:
-  - entity_id: input_number.goecharger_charge_limit
-    platform: state
-  condition: []
-  action:
-  - data_template:
-      charge_limit: '{{ states(''input_number.goecharger_charge_limit'') }}'
-    service: goecharger.set_charge_limit
-- id: '1577036687192'
-  alias: 'goecharger: set charge_limit input based on charger'
-  description: ''
-  trigger:
-  - entity_id: sensor.goecharger_111111_charge_limit
-    platform: state
-  condition: []
-  action:
-  - data_template:
-      entity_id: input_number.goecharger_charge_limit
-      value: '{{ states.sensor.goecharger_111111_charge_limit.state }}'
-    service: input_number.set_value
+- id: goamplocal_bev_mode_template
+  alias: "EV charging: apply selected mode"
+  mode: restart
+  triggers:
+    - trigger: state
+      entity_id:
+        - input_select.ev_charging_mode
+        - binary_sensor.ev_connected
+  conditions:
+    - condition: state
+      entity_id: binary_sensor.ev_connected
+      state: "on"
+  actions:
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: input_select.ev_charging_mode
+              state: "Off"
+          sequence:
+            - action: select.select_option
+              target:
+                entity_id: select.goecharger_charger1_force_state
+              data:
+                option: "Off"
+
+        - conditions:
+            - condition: state
+              entity_id: input_select.ev_charging_mode
+              state: "Immediate"
+          sequence:
+            - action: switch.turn_off
+              target:
+                entity_id: switch.goecharger_charger1_pv_surplus
+            - action: number.set_value
+              target:
+                entity_id: number.goecharger_charger1_charger_max_current
+              data:
+                value: 16
+            - action: select.select_option
+              target:
+                entity_id: select.goecharger_charger1_force_state
+              data:
+                option: "On"
+
+        - conditions:
+            - condition: state
+              entity_id: input_select.ev_charging_mode
+              state: "PV surplus"
+          sequence:
+            - action: switch.turn_on
+              target:
+                entity_id: switch.goecharger_charger1_pv_surplus
+            - action: select.select_option
+              target:
+                entity_id: select.goecharger_charger1_force_state
+              data:
+                option: "On"
 ```
 
-## Lovcelace-UI Card Example
+This is a small mode switch, not a full charging optimizer. Use evcc or another
+dedicated controller if you need tariff-aware plans, battery coordination, or
+advanced load management.
 
-**Important: Replace `111111` with your chargers name.**
+## Development
 
-```yaml
-cards:
-entities:
-  - entity: switch.goecharger_111111_allow_charging
-  - entity: input_number.goecharger_charge_limit
-  - entity: input_select.goecharger_max_current
-  - entity: sensor.goecharger_111111_car_status
-  - entity: sensor.goecharger_111111_charger_temp
-  - entity: sensor.goecharger_111111_current_session_charged_energy
-  - entity: sensor.goecharger_111111_current_session_charged_energy_corrected
-  - entity: sensor.goecharger_111111_p_all
-  - entity: sensor.goecharger_111111_p_l1
-  - entity: sensor.goecharger_111111_p_l2
-  - entity: sensor.goecharger_111111_p_l3
-  - entity: sensor.goecharger_111111_u_l1
-  - entity: sensor.goecharger_111111_u_l2
-  - entity: sensor.goecharger_111111_u_l3
-  - entity: sensor.goecharger_111111_i_l1
-  - entity: sensor.goecharger_111111_i_l2
-  - entity: sensor.goecharger_111111_i_l3
-  - entity: sensor.goecharger_111111_energy_total
-  - entity: sensor.goecharger_111111_energy_total_corrected
-show_header_toggle: false
-title: EV Charger (go-eCharger)
-type: entities
+Run the test suite before committing:
+
+```bash
+python3 -m unittest discover -s tests -v
 ```
+
+Version numbers follow SemVer. The installable integration version lives in
+`custom_components/goecharger/manifest.json` and is bumped by the release
+workflow.
+
+## License And Attribution
+
+This project is released under the MIT License. It keeps the upstream copyright
+and license notice from `cathiele/homeassistant-goecharger`, as required by the
+license.
