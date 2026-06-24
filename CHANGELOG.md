@@ -5,6 +5,10 @@ Version numbers follow SemVer 2.0.0. The installable integration version lives i
 
 ## Unreleased
 
+## 0.29.2 - 2026-06-24
+
+- fix: mark API v2 as recommended
+
 ## 0.29.1 - 2026-06-24
 
 - Mark API v2 as the recommended local API option in the setup UI.
