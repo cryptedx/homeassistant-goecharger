@@ -7,6 +7,15 @@
                     "host": "Hostname or IP-Address in the local network",
                     "name": "uniq name of the charger",
                     "scan_interval": "Pollinterval in seconds",
+                    "correction_factor": "correction Factor for incorrect Voltage measurement",
+                    "api_version": "Local API version"
+                }
+            },
+            "init": {
+                "title": "go-eCharger Options",
+                "data": {
+                    "api_version": "Local API version",
+                    "scan_interval": "Pollinterval in seconds",
                     "correction_factor": "correction Factor for incorrect Voltage measurement"
                 }
             }
@@ -68,6 +77,24 @@
                 "charge_limit": {
                     "name": "charge limit",
                     "description": "charge limit in kWh example '2.5'"
+                }
+            }
+        },
+        "set_api_key": {
+            "name": "Set API v2 key",
+            "description": "Expert service to write any go-eCharger API v2 key.",
+            "fields": {
+                "charger_name": {
+                    "name": "Charger name",
+                    "description": "name of the charger to update"
+                },
+                "key": {
+                    "name": "API key",
+                    "description": "go-eCharger API v2 key"
+                },
+                "value": {
+                    "name": "Value",
+                    "description": "JSON value to write"
                 }
             }
         }

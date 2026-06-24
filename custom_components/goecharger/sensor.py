@@ -14,7 +14,8 @@ from homeassistant.components.sensor import (
 )
 
 
-from .const import CONF_CHARGERS, DOMAIN, CONF_NAME, CONF_CORRECTION_FACTOR, charger_entity_id
+from .const import CHARGER_API, CONF_CHARGERS, DOMAIN, CONF_NAME, CONF_CORRECTION_FACTOR, charger_entity_id
+from .api import GoeChargerV2
 
 AMPERE = 'A'
 VOLT = 'V'
@@ -57,6 +58,14 @@ _sensorUnits = {
     'lf_l3': {'unit': PERCENT, 'name': 'Power factor L3'},
     'lf_n': {'unit': PERCENT, 'name': 'Loadfactor N'},
     'car_status': {'unit': '', 'name': 'Status'}
+}
+_v2SensorUnits = {
+    'model_status': {'unit': '', 'name': 'Model status'},
+    'allowed_current': {'unit': AMPERE, 'name': 'Allowed current'},
+    'force_single_phase': {'unit': '', 'name': 'Force single phase'},
+    'p_grid': {'unit': UnitOfEnergy.KILO_WATT, 'name': 'Grid power'},
+    'p_pv': {'unit': UnitOfEnergy.KILO_WATT, 'name': 'PV power'},
+    'p_akku': {'unit': UnitOfEnergy.KILO_WATT, 'name': 'Battery power'},
 }
 
 _sensorStateClass = {
@@ -126,16 +135,27 @@ _sensors = [
     'timezone_offset',
     'timezone_dst_offset',
 ]
+_v2Sensors = [
+    'model_status',
+    'allowed_current',
+    'force_single_phase',
+    'p_grid',
+    'p_pv',
+    'p_akku',
+]
 
 
-def _create_sensors_for_charger(chargerName, hass, correctionFactor):
+def _create_sensors_for_charger(chargerName, hass, correctionFactor, chargerApi=None):
     entities = []
 
-    for sensor in _sensors:
+    sensors = _sensors + (_v2Sensors if isinstance(chargerApi, GoeChargerV2) else [])
+    sensorUnits = {**_sensorUnits, **_v2SensorUnits}
+
+    for sensor in sensors:
 
         _LOGGER.debug(f"adding Sensor: {sensor} for charger {chargerName}")
-        sensorUnit = _sensorUnits.get(sensor).get('unit') if _sensorUnits.get(sensor) else ''
-        sensorName = _sensorUnits.get(sensor).get('name') if _sensorUnits.get(sensor) else sensor
+        sensorUnit = sensorUnits.get(sensor).get('unit') if sensorUnits.get(sensor) else ''
+        sensorName = sensorUnits.get(sensor).get('name') if sensorUnits.get(sensor) else sensor
         sensorStateClass = _sensorStateClass[sensor] if sensor in _sensorStateClass else ''
         sensorDeviceClass = _sensorDeviceClass[sensor] if sensor in _sensorDeviceClass else ''
         entities.append(
@@ -168,7 +188,7 @@ async def async_setup_entry(
 
     _LOGGER.debug(f"charger name: '{chargerName}'")
     _LOGGER.debug(f"config: '{config}'")
-    async_add_entities(_create_sensors_for_charger(chargerName, hass, correctionFactor))
+    async_add_entities(_create_sensors_for_charger(chargerName, hass, correctionFactor, hass.data[DOMAIN]["api"][chargerName]))
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
@@ -178,6 +198,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         return
 
     chargers = discovery_info[CONF_CHARGERS]
+    chargerApi = discovery_info.get(CHARGER_API, {})
 
     entities = []
     for charger in chargers:
@@ -192,7 +213,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 __LOGGER.warn(f"can't parse correctionFactor. Using 1.0")
                 correctionFactor = 1.0
 
-        entities.extend(_create_sensors_for_charger(chargerName, hass, correctionFactor))
+        entities.extend(_create_sensors_for_charger(chargerName, hass, correctionFactor, chargerApi.get(chargerName)))
 
     async_add_entities(entities)
 

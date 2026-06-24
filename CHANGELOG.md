@@ -5,6 +5,12 @@ Version numbers follow SemVer 2.0.0. The installable integration version lives i
 
 ## Unreleased
 
+## 0.28.0 - 2026-06-24
+
+- Added selectable local API v2 support while keeping API v1 as the default.
+- Added curated API v2 number, select, and switch entities for core charger controls.
+- Added `goecharger.set_api_key` for expert API v2 writes.
+
 ## 0.27.4 - 2026-06-24
 
 - Publish HACS release ZIP assets so installs do not depend on HACS' cached repository path.

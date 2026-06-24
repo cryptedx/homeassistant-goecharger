@@ -22,6 +22,7 @@ voluptuous.All = lambda *args, **kwargs: lambda value: value
 voluptuous.Optional = lambda key, **kwargs: key
 voluptuous.Required = lambda key, **kwargs: key
 voluptuous.Clamp = lambda *args, **kwargs: lambda value: value
+voluptuous.In = lambda *args, **kwargs: lambda value: value
 
 homeassistant = _install_module("homeassistant", types.ModuleType("homeassistant"))
 homeassistant.const = _install_module("homeassistant.const", types.ModuleType("homeassistant.const"))
@@ -49,6 +50,14 @@ homeassistant.components.switch = _install_module(
     "homeassistant.components.switch", types.ModuleType("homeassistant.components.switch")
 )
 homeassistant.components.switch.SwitchEntity = object
+homeassistant.components.number = _install_module(
+    "homeassistant.components.number", types.ModuleType("homeassistant.components.number")
+)
+homeassistant.components.number.NumberEntity = object
+homeassistant.components.select = _install_module(
+    "homeassistant.components.select", types.ModuleType("homeassistant.components.select")
+)
+homeassistant.components.select.SelectEntity = object
 homeassistant.helpers = _install_module("homeassistant.helpers", types.ModuleType("homeassistant.helpers"))
 homeassistant.helpers.config_validation = _install_module(
     "homeassistant.helpers.config_validation", types.ModuleType("homeassistant.helpers.config_validation")
@@ -87,6 +96,9 @@ goecharger.GoeCharger = object
 
 sys.path.insert(0, str(ROOT))
 goecharger_integration = importlib.import_module("custom_components.goecharger")
+goecharger_api = importlib.import_module("custom_components.goecharger.api")
+goecharger_number = importlib.import_module("custom_components.goecharger.number")
+goecharger_select = importlib.import_module("custom_components.goecharger.select")
 goecharger_sensor = importlib.import_module("custom_components.goecharger.sensor")
 goecharger_switch = importlib.import_module("custom_components.goecharger.switch")
 
@@ -165,6 +177,19 @@ class StateFetcherTests(unittest.TestCase):
         self.assertFalse(switch.available)
         self.assertIsNone(switch.is_on)
 
+    def test_switch_uses_configured_name(self):
+        switch = goecharger_switch.GoeChargerSwitch(
+            types.SimpleNamespace(data={}),
+            FakeHass({}),
+            WorkingCharger(),
+            "switch.test",
+            "charger1",
+            "Charging allowed",
+            "allow_charging",
+        )
+
+        self.assertEqual(switch.name, "Charging allowed")
+
     def test_entities_are_unavailable_when_coordinator_update_failed(self):
         coordinator = types.SimpleNamespace(
             data={"broken": {"p_all": 1, "allow_charging": "on"}},
@@ -193,6 +218,51 @@ class StateFetcherTests(unittest.TestCase):
 
         self.assertFalse(sensor.available)
         self.assertFalse(switch.available)
+
+    def test_v2_extra_sensors_are_only_created_for_v2_chargers(self):
+        hass = types.SimpleNamespace(
+            data={
+                goecharger_integration.DOMAIN: {
+                    "coordinator": types.SimpleNamespace(data={}),
+                }
+            }
+        )
+
+        v1_sensors = goecharger_sensor._create_sensors_for_charger(
+            "charger1", hass, 1.0, WorkingCharger()
+        )
+        v2_sensors = goecharger_sensor._create_sensors_for_charger(
+            "charger1", hass, 1.0, goecharger_api.GoeChargerV2("192.0.2.10")
+        )
+
+        self.assertNotIn("p_grid", [sensor._attribute for sensor in v1_sensors])
+        self.assertIn("p_grid", [sensor._attribute for sensor in v2_sensors])
+
+    def test_v2_controls_are_only_created_for_v2_chargers(self):
+        hass = types.SimpleNamespace(
+            data={
+                goecharger_integration.DOMAIN: {
+                    "coordinator": types.SimpleNamespace(data={}),
+                }
+            }
+        )
+
+        self.assertEqual(
+            goecharger_number._create_numbers_for_charger(hass, "charger1", WorkingCharger()),
+            [],
+        )
+        self.assertEqual(
+            goecharger_select._create_selects_for_charger(hass, "charger1", WorkingCharger()),
+            [],
+        )
+        self.assertGreater(
+            len(goecharger_number._create_numbers_for_charger(hass, "charger1", goecharger_api.GoeChargerV2("192.0.2.10"))),
+            0,
+        )
+        self.assertGreater(
+            len(goecharger_select._create_selects_for_charger(hass, "charger1", goecharger_api.GoeChargerV2("192.0.2.10"))),
+            0,
+        )
 
 
 if __name__ == "__main__":

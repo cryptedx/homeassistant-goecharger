@@ -22,3 +22,11 @@ set_charge_limit:
       example: "charger1"
     charge_limit:
       example: "2.5"
+set_api_key:
+  fields:
+    charger_name:
+      example: "charger1"
+    key:
+      example: "fup"
+    value:
+      example: true

@@ -7,6 +7,15 @@
                     "host": "Hostname oder IP-Address im lokalen Netzwerk",
                     "name": "Im Homeassistant eindeutiger Name des Chargers",
                     "scan_interval": "Abfrageintervall in Sekunden",
+                    "correction_factor": "Korrekturfaktor für ungenaue Spannungsmessung",
+                    "api_version": "Lokale API-Version"
+                }
+            },
+            "init": {
+                "title": "go-eCharger Optionen",
+                "data": {
+                    "api_version": "Lokale API-Version",
+                    "scan_interval": "Abfrageintervall in Sekunden",
                     "correction_factor": "Korrekturfaktor für ungenaue Spannungsmessung"
                 }
             }
@@ -68,6 +77,24 @@
                 "charge_limit": {
                     "name": "Ladelimit",
                     "description": "Ladelimit in kWh, z.B. '2.5'"
+                }
+            }
+        },
+        "set_api_key": {
+            "name": "API-v2-Schlüssel setzen",
+            "description": "Experten-Service zum Schreiben eines beliebigen go-eCharger API-v2-Schlüssels.",
+            "fields": {
+                "charger_name": {
+                    "name": "Ladername",
+                    "description": "Name des zu ändernden Chargers"
+                },
+                "key": {
+                    "name": "API-Schlüssel",
+                    "description": "go-eCharger API-v2-Schlüssel"
+                },
+                "value": {
+                    "name": "Wert",
+                    "description": "JSON-Wert, der geschrieben werden soll"
                 }
             }
         }
