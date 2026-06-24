@@ -5,6 +5,8 @@ Version numbers follow SemVer 2.0.0. The installable integration version lives i
 
 ## Unreleased
 
+## 0.27.4 - 2026-06-24
+
 - Publish HACS release ZIP assets so installs do not depend on HACS' cached repository path.
 
 ## 0.27.3 - 2026-06-24
