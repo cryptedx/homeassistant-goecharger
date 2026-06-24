@@ -4,18 +4,20 @@
 
 - Use SemVer for this repository. The source of truth is
   `custom_components/goecharger/manifest.json`.
-- Before every commit, decide whether the change needs a version bump. Bump in
-  the same commit when installed integration behavior changes: `fix`, `feat`,
-  `perf`, dependency/runtime changes, services, entity behavior, config flow, or
-  user-visible translations.
-- Skip the bump for docs, tests, CI, comments, and agent instructions when the
-  installed integration behavior is unchanged.
-- For the current `0.y.z` line: patch = backward-compatible fix, minor =
-  backward-compatible feature or breaking user-visible change. Mark breaking
-  changes clearly in `CHANGELOG.md`. Use major only when declaring `1.0.0+`
-  stability.
-- Every version bump must update both `manifest.json` and `CHANGELOG.md`.
-- Release tags use `vX.Y.Z` and should point at the commit containing the same
-  manifest version.
+- Do not bump versions by hand during normal work. The `Release` workflow bumps
+  `manifest.json`, updates `CHANGELOG.md`, creates `vX.Y.Z`, and publishes the
+  GitHub Release after changes land on `main`.
+- Use Conventional Commit subjects so the release workflow can pick the right
+  bump: `fix`/`perf`/dependency scopes = patch, `feat` = minor, breaking changes
+  = minor while this repo is on `0.y.z` and major after `1.0.0`.
+- If commits are not conventional but files under `custom_components/goecharger/`
+  changed, the workflow falls back to a patch release.
+- Docs, tests, CI, comments, and agent instructions do not release unless paired
+  with installable integration changes.
+- Keep optional human-written release notes under `## Unreleased`; the workflow
+  moves them into the next release entry. If that section is empty, it generates
+  release notes from commit subjects.
+- If the repository has no `vX.Y.Z` tag yet, the first workflow run bootstraps a
+  GitHub Release for the current manifest version without incrementing it.
 
 Run `python3 -m unittest discover -s tests -v` before committing.

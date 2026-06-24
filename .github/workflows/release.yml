@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  queue: max
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Update to latest main
+        run: git pull --ff-only origin main
+
+      - name: Plan release
+        id: release
+        run: python3 scripts/release.py
+
+      - name: Run tests
+        if: steps.release.outputs.should_release == 'true'
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Commit version files
+        if: steps.release.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add custom_components/goecharger/manifest.json CHANGELOG.md
+          git commit -m "chore(release): ${{ steps.release.outputs.tag }} [skip ci]"
+
+      - name: Tag and publish release
+        if: steps.release.outputs.should_release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          git tag "$TAG"
+          git push origin HEAD:main --follow-tags
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --generate-notes --latest --verify-tag

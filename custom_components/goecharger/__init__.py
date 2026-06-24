@@ -89,10 +89,14 @@ class ChargerStateFetcher:
         _LOGGER.debug('Updating status...')
         goeChargers = self._hass.data[DOMAIN]["api"]
         data = self.coordinator.data if self.coordinator.data else {}
-        for chargerName in goeChargers.keys():
+        for chargerName, charger in goeChargers.items():
             _LOGGER.debug(f"update for '{chargerName}'..")
-            fetchedStatus = await self._hass.async_add_executor_job(goeChargers[chargerName].requestStatus)
-            if fetchedStatus.get("car_status", "unknown") != "unknown":
+            try:
+                fetchedStatus = await self._hass.async_add_executor_job(charger.requestStatus)
+            except Exception as err:
+                _LOGGER.error(f"Unable to fetch state for Charger {chargerName}: {err}")
+                continue
+            if isinstance(fetchedStatus, dict) and fetchedStatus.get("car_status", "unknown") != "unknown":
                 data[chargerName] = fetchedStatus
             else:
                 _LOGGER.error(f"Unable to fetch state for Charger {chargerName}")

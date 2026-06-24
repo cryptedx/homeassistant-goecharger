@@ -6,6 +6,7 @@ Version numbers follow SemVer 2.0.0. The installable integration version lives i
 ## Unreleased
 
 - Added repository versioning policy, changelog, and versioning checks.
+- Added automatic SemVer bumping, Git tag creation, and GitHub Release publishing.
 
 ## 0.27.1 - 2026-06-24
 
