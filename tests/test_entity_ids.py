@@ -14,8 +14,8 @@ spec.loader.exec_module(goecharger_const)
 class EntityIdTests(unittest.TestCase):
     def test_charger_entity_id_slugifies_device_name(self):
         self.assertEqual(
-            goecharger_const.charger_entity_id("sensor", "go-eCharger Außen V2", "p_all"),
-            "sensor.goecharger_go_echarger_aussen_v2_p_all",
+            goecharger_const.charger_entity_id("sensor", "go-eCharger Outdoor V2", "p_all"),
+            "sensor.goecharger_go_echarger_outdoor_v2_p_all",
         )
 
 

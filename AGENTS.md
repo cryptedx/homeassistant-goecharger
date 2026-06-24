@@ -1,5 +1,12 @@
 # Agent Instructions
 
+## Language
+
+- Keep source code, comments, tests, workflows, agent instructions, and
+  repository-maintenance text in English.
+- Localized translation files under `custom_components/goecharger/translations/`
+  may use their target language.
+
 ## Versioning
 
 - Use SemVer for this repository. The source of truth is
