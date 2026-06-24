@@ -81,6 +81,8 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(const.API_VERSION_V1, "v1")
         self.assertEqual(const.API_VERSION_V2, "v2")
         self.assertEqual(const.DEFAULT_API_VERSION, "v1")
+        self.assertEqual(const.API_VERSIONS[const.API_VERSION_V1], "v1")
+        self.assertEqual(const.API_VERSIONS[const.API_VERSION_V2], "v2 (recommended)")
 
     def test_factory_returns_selected_backend(self):
         from custom_components.goecharger.api import GoeChargerV1, GoeChargerV2, create_charger
