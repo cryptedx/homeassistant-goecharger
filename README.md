@@ -1,6 +1,7 @@
 # Home Assistant integration for the go-eCharger (WIP)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
+[![Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cryptedx&repository=homeassistant-goecharger&category=integration)
 [![Validate with hassfest](https://github.com/cathiele/homeassistant-goecharger/actions/workflows/hassfest.yaml/badge.svg?branch=main)](https://github.com/cathiele/homeassistant-goecharger/actions/workflows/hassfest.yaml)
 
 Integration for Homeassistant to view and Control the go-eCharger for electric Vehicles via the local ip-interface via API Version 1. In newer chargers the V1 API has to be enabled via the App first.
@@ -18,6 +19,12 @@ Integration for Homeassistant to view and Control the go-eCharger for electric V
 This is the first version of the Integration so there are still breaking changes possible.
 
 # Installation
+
+## HACS
+
+Click the My Home Assistant button above to open this repository directly in HACS, then install the integration from there.
+
+## Manual
 
 - clone this repository
 ```
