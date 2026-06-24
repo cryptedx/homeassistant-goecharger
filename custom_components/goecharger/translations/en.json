@@ -2,7 +2,7 @@
     "config": {
         "step": {
             "user": {
-                "title": "go-eCharger Setup",
+                "title": "GoAmpLocal Setup",
                 "data": {
                     "host": "Hostname or IP-Address in the local network",
                     "name": "uniq name of the charger",
@@ -12,7 +12,7 @@
                 }
             },
             "init": {
-                "title": "go-eCharger Options",
+                "title": "GoAmpLocal Options",
                 "data": {
                     "api_version": "Local API version",
                     "scan_interval": "Pollinterval in seconds",

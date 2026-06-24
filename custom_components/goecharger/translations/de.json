@@ -2,7 +2,7 @@
     "config": {
         "step": {
             "user": {
-                "title": "go-eCharger Setup",
+                "title": "GoAmpLocal Setup",
                 "data": {
                     "host": "Hostname oder IP-Address im lokalen Netzwerk",
                     "name": "Im Homeassistant eindeutiger Name des Chargers",
@@ -12,7 +12,7 @@
                 }
             },
             "init": {
-                "title": "go-eCharger Optionen",
+                "title": "GoAmpLocal Optionen",
                 "data": {
                     "api_version": "Lokale API-Version",
                     "scan_interval": "Abfrageintervall in Sekunden",

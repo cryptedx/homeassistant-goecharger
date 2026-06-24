@@ -5,6 +5,8 @@ Version numbers follow SemVer 2.0.0. The installable integration version lives i
 
 ## Unreleased
 
+- Refresh project metadata for GoAmpLocal.
+
 ## 0.29.2 - 2026-06-24
 
 - fix: mark API v2 as recommended

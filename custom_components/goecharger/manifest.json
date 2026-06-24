@@ -1,14 +1,14 @@
 {
   "domain": "goecharger",
-  "name": "go-eCharger",
+  "name": "GoAmpLocal",
   "codeowners": [
-    "@cathiele"
+    "@cryptedx"
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/cathiele/homeassistant-goecharger",
+  "documentation": "https://github.com/cryptedx/homeassistant-goecharger",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/cathiele/homeassistant-goecharger/issues",
+  "issue_tracker": "https://github.com/cryptedx/homeassistant-goecharger/issues",
   "requirements": [
     "goecharger==0.1.0"
   ],
