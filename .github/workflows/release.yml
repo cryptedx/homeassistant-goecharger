@@ -48,5 +48,6 @@ jobs:
           TAG: ${{ steps.release.outputs.tag }}
         run: |
           git tag "$TAG"
-          git push origin HEAD:main --follow-tags
+          git push origin HEAD:main
+          git push origin "$TAG"
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --generate-notes --latest --verify-tag
