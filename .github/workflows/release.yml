@@ -41,6 +41,10 @@ jobs:
           git add custom_components/goecharger/manifest.json CHANGELOG.md
           git commit -m "chore(release): ${{ steps.release.outputs.tag }} [skip ci]"
 
+      - name: Build HACS release asset
+        if: steps.release.outputs.should_release == 'true'
+        run: python3 scripts/build_hacs_release.py
+
       - name: Tag and publish release
         if: steps.release.outputs.should_release == 'true'
         env:
@@ -50,4 +54,4 @@ jobs:
           git tag "$TAG"
           git push origin HEAD:main
           git push origin "$TAG"
-          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --generate-notes --latest --verify-tag
+          gh release create "$TAG" goecharger.zip --repo "$GITHUB_REPOSITORY" --generate-notes --latest --verify-tag

@@ -1,4 +1,6 @@
 {
   "name": "go-eCharger",
-  "render_readme": true
+  "render_readme": true,
+  "zip_release": true,
+  "filename": "goecharger.zip"
 }
