@@ -6,9 +6,9 @@
 
 Integration for Homeassistant to view and Control the go-eCharger for electric Vehicles via the local ip-interface via API Version 1. In newer chargers the V1 API has to be enabled via the App first.
 
-## Maintained fork
+## Personal fork
 
-This fork continues development of the original `cathiele/homeassistant-goecharger` integration. The upstream project has not published a release since June 2025, so this repository is now the active place for fixes. I am working through the open bugs from the original repository where possible.
+This is a personal fork of the original `cathiele/homeassistant-goecharger` integration. The upstream project has not published a release since June 2025, and I use this integration myself, so I am fixing bugs here in my spare time as far as possible. This is not an official takeover of the original project.
 
 ## Features
 - attributes from charger available as sensors
