@@ -2,9 +2,13 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
 [![Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cryptedx&repository=homeassistant-goecharger&category=integration)
-[![Validate with hassfest](https://github.com/cathiele/homeassistant-goecharger/actions/workflows/hassfest.yaml/badge.svg?branch=main)](https://github.com/cathiele/homeassistant-goecharger/actions/workflows/hassfest.yaml)
+[![Validate with hassfest](https://github.com/cryptedx/homeassistant-goecharger/actions/workflows/hassfest.yaml/badge.svg?branch=main)](https://github.com/cryptedx/homeassistant-goecharger/actions/workflows/hassfest.yaml)
 
 Integration for Homeassistant to view and Control the go-eCharger for electric Vehicles via the local ip-interface via API Version 1. In newer chargers the V1 API has to be enabled via the App first.
+
+## Maintained fork
+
+This fork continues development of the original `cathiele/homeassistant-goecharger` integration. The upstream project has not published a release since June 2025, so this repository is now the active place for fixes. I am working through the open bugs from the original repository where possible.
 
 ## Features
 - attributes from charger available as sensors
@@ -28,7 +32,7 @@ Click the My Home Assistant button above to open this repository directly in HAC
 
 - clone this repository
 ```
-git clone https://github.com/cathiele/homeassistant-goecharger.git
+git clone https://github.com/cryptedx/homeassistant-goecharger.git
 ```
 - copy the content of the `custom_components`-Folder to the `custom_components` folder of your home-assistant installation
 
