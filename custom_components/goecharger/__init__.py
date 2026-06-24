@@ -9,7 +9,7 @@ from homeassistant.const import CONF_HOST, CONF_SCAN_INTERVAL
 from homeassistant.core import valid_entity_id
 from homeassistant import core
 from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, CONF_SERIAL, CONF_CHARGERS, CONF_CORRECTION_FACTOR, CONF_NAME, CHARGER_API
 from goecharger import GoeCharger
@@ -88,18 +88,27 @@ class ChargerStateFetcher:
     async def fetch_states(self):
         _LOGGER.debug('Updating status...')
         goeChargers = self._hass.data[DOMAIN]["api"]
-        data = self.coordinator.data if self.coordinator.data else {}
+        data = dict(self.coordinator.data or {})
+        updated = 0
+        errors = []
         for chargerName, charger in goeChargers.items():
             _LOGGER.debug(f"update for '{chargerName}'..")
             try:
                 fetchedStatus = await self._hass.async_add_executor_job(charger.requestStatus)
             except Exception as err:
                 _LOGGER.error(f"Unable to fetch state for Charger {chargerName}: {err}")
+                data.pop(chargerName, None)
+                errors.append(f"{chargerName}: {err}")
                 continue
             if isinstance(fetchedStatus, dict) and fetchedStatus.get("car_status", "unknown") != "unknown":
                 data[chargerName] = fetchedStatus
+                updated += 1
             else:
                 _LOGGER.error(f"Unable to fetch state for Charger {chargerName}")
+                data.pop(chargerName, None)
+                errors.append(chargerName)
+        if goeChargers and updated == 0:
+            raise UpdateFailed("; ".join(errors) or "Unable to fetch goecharger data")
         return data
 
 

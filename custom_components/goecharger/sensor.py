@@ -234,14 +234,32 @@ class GoeChargerSensor(CoordinatorEntity, SensorEntity):
         """Return the unique_id of the sensor."""
         return f"{self._chargername}_{self._attribute}"
 
+    def _charger_data(self):
+        return (self.coordinator.data or {}).get(self._chargername, {})
+
+    @property
+    def available(self):
+        """Return if entity is available."""
+        if not super().available:
+            return False
+        data = self._charger_data()
+        if self._attribute == 'energy_total_corrected':
+            return 'energy_total' in data
+        if self._attribute == 'current_session_charged_energy_corrected':
+            return 'current_session_charged_energy' in data
+        return self._attribute in data
+
     @property
     def state(self):
         """Return the state of the sensor."""
+        data = self._charger_data()
         if (self._attribute == 'energy_total_corrected'):
-            return self.coordinator.data[self._chargername]['energy_total'] * self.correctionFactor
+            value = data.get('energy_total')
+            return value * self.correctionFactor if value is not None else None
         if (self._attribute == 'current_session_charged_energy_corrected'):
-            return self.coordinator.data[self._chargername]['current_session_charged_energy'] * self.correctionFactor   
-        return self.coordinator.data[self._chargername][self._attribute]
+            value = data.get('current_session_charged_energy')
+            return value * self.correctionFactor if value is not None else None
+        return data.get(self._attribute)
 
     @property
     def unit_of_measurement(self):

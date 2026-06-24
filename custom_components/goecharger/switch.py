@@ -117,6 +117,12 @@ class GoeChargerSwitch(CoordinatorEntity, SwitchEntity):
         return f"{self._chargername}_{self._attribute}"
 
     @property
+    def available(self):
+        """Return if entity is available."""
+        return super().available and self._attribute in (self.coordinator.data or {}).get(self._chargername, {})
+
+    @property
     def is_on(self):
         """Return the state of the switch."""
-        return True if self.coordinator.data[self._chargername][self._attribute] == "on" else False
+        state = (self.coordinator.data or {}).get(self._chargername, {}).get(self._attribute)
+        return None if state is None else state == "on"
