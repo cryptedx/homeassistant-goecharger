@@ -24,6 +24,9 @@
         "abort": {
             "already_configured": "Gerät ist bereits konfiguriert",
             "already_in_progress": "Konfiguration läuft bereits"
+        },
+        "error": {
+            "cannot_connect": "Verbindung zum Charger fehlgeschlagen"
         }
     },
     "services": {

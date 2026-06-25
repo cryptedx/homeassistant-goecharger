@@ -245,3 +245,11 @@ def create_charger(host, api_version=DEFAULT_API_VERSION):
     if api_version == API_VERSION_V2:
         return GoeChargerV2(host)
     raise ValueError(f"Unsupported go-eCharger API version: {api_version}")
+
+
+def detect_api_version(host, open_url=urlopen):
+    try:
+        GoeChargerV2(host, open_url=open_url)._get_json("/api/status", {"filter": "fwv"})
+    except Exception:
+        return API_VERSION_V1
+    return API_VERSION_V2

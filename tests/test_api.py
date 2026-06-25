@@ -80,7 +80,14 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(const.CONF_API_VERSION, "api_version")
         self.assertEqual(const.API_VERSION_V1, "v1")
         self.assertEqual(const.API_VERSION_V2, "v2")
+        self.assertEqual(const.API_VERSION_AUTO, "auto")
         self.assertEqual(const.DEFAULT_API_VERSION, "v1")
+        self.assertEqual(set(const.API_VERSIONS), {const.API_VERSION_V1, const.API_VERSION_V2})
+        self.assertEqual(
+            set(getattr(const, "API_VERSION_OPTIONS", {})),
+            {const.API_VERSION_AUTO, const.API_VERSION_V1, const.API_VERSION_V2},
+        )
+        self.assertEqual(const.API_VERSION_OPTIONS[const.API_VERSION_AUTO], "Auto-detect")
         self.assertEqual(const.API_VERSIONS[const.API_VERSION_V1], "v1")
         self.assertEqual(const.API_VERSIONS[const.API_VERSION_V2], "v2 (recommended)")
 
@@ -92,6 +99,18 @@ class ApiTests(unittest.TestCase):
         self.assertIsInstance(create_charger("192.0.2.10", "v2"), GoeChargerV2)
         with self.assertRaises(ValueError):
             create_charger("192.0.2.10", "v3")
+
+    def test_factory_rejects_auto_without_detecting(self):
+        from custom_components.goecharger import api
+        from custom_components.goecharger.const import API_VERSION_AUTO
+
+        original_detect = api.detect_api_version
+        try:
+            api.detect_api_version = lambda host: self.fail("create_charger must not auto-detect")
+            with self.assertRaises(ValueError):
+                api.create_charger("192.0.2.10", API_VERSION_AUTO)
+        finally:
+            api.detect_api_version = original_detect
 
     def test_v2_status_maps_existing_and_v2_fields(self):
         from custom_components.goecharger.api import GoeChargerV2
