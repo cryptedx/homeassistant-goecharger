@@ -5,6 +5,21 @@ Version numbers follow SemVer 2.0.0. The installable integration version lives i
 
 ## Unreleased
 
+## 0.30.0 - 2026-06-25
+
+- Merge remote-tracking branch 'origin/main'
+- test: isolate zeroconf config flow stub
+- Merge branch 'codex/config-flow-autodetect' into codex/integrate-next-features
+- Merge branch 'codex/zeroconf-discovery' into codex/integrate-next-features
+- Merge branch 'codex/diagnostics-export' into codex/integrate-next-features
+- Merge branch 'codex/binary-sensors' into codex/integrate-next-features
+- feat: autodetect charger api version
+- feat: add go-e zeroconf discovery
+- feat: add charger binary sensors
+- feat: add sensor device classes
+- feat: add diagnostics export
+- docs: plan next goecharger features
+
 ## 0.29.3 - 2026-06-24
 
 - Refresh project metadata for GoAmpLocal.
