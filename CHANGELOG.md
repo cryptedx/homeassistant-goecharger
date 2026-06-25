@@ -5,6 +5,10 @@ Version numbers follow SemVer 2.0.0. The installable integration version lives i
 
 ## Unreleased
 
+## 0.30.2 - 2026-06-25
+
+- fix: sort manifest keys for hassfest
+
 ## 0.30.1 - 2026-06-25
 
 - Merge remote-tracking branch 'origin/main'
