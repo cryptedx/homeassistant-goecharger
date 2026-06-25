@@ -86,6 +86,8 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         entry_name = name.removesuffix("._http._tcp.local.").strip() or "go-eCharger"
 
         self.context["title_placeholders"] = {"name": name}
+        await self.async_set_unique_id(name)
+        self._abort_if_unique_id_configured(updates={CONF_HOST: host})
         self._discovered_data = {
             CONF_HOST: host,
             CONF_NAME: entry_name,

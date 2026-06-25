@@ -98,7 +98,7 @@ class ZeroconfTests(unittest.TestCase):
     def test_manifest_advertises_go_echarger_http_zeroconf(self):
         self.assertEqual(
             self.manifest().get("zeroconf"),
-            [{"type": "_http._tcp.local.", "name": "go-eCharger*"}],
+            [{"type": "_http._tcp.local.", "name": "go-echarger*"}],
         )
 
     def test_config_flow_contains_zeroconf_entrypoint(self):
@@ -122,7 +122,7 @@ class ZeroconfTests(unittest.TestCase):
 
         result = asyncio.run(flow.async_step_zeroconf(discovery_info))
 
-        self.assertIsNone(flow.unique_id)
+        self.assertEqual(flow.unique_id, "go-eCharger 123._http._tcp.local.")
         self.assertTrue(flow.discovery_without_unique_id_handled)
         self.assertEqual(
             flow.context["title_placeholders"],

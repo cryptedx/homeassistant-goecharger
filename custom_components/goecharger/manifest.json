@@ -16,7 +16,7 @@
   "zeroconf": [
     {
       "type": "_http._tcp.local.",
-      "name": "go-eCharger*"
+      "name": "go-echarger*"
     }
   ],
   "version": "0.29.3"
