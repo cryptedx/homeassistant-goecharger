@@ -1,5 +1,6 @@
 {
     "config": {
+        "flow_title": "{name}",
         "step": {
             "user": {
                 "title": "GoAmpLocal Setup",
@@ -21,6 +22,8 @@
             }
         },
         "abort": {
+            "already_configured": "Gerät ist bereits konfiguriert",
+            "already_in_progress": "Konfiguration läuft bereits"
         }
     },
     "services": {

@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+from inspect import isawaitable
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -44,6 +45,37 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     ): vol.In(API_VERSIONS),
                 }
             ),
+        )
+
+    async def async_step_zeroconf(self, discovery_info):
+        host = discovery_info.host
+        name = discovery_info.name or "go-eCharger"
+        entry_name = name.removesuffix("._http._tcp.local.").strip() or "go-eCharger"
+
+        self.context["title_placeholders"] = {"name": name}
+        self._discovered_data = {
+            CONF_HOST: host,
+            CONF_NAME: entry_name,
+            CONF_SCAN_INTERVAL: 20,
+            CONF_CORRECTION_FACTOR: "1.0",
+            CONF_API_VERSION: DEFAULT_API_VERSION,
+        }
+
+        handle_discovery = getattr(self, "_async_handle_discovery_without_unique_id", None)
+        if handle_discovery:
+            result = handle_discovery()
+            if isawaitable(result):
+                await result
+
+        return self.async_show_form(step_id="confirm")
+
+    async def async_step_confirm(self, user_input=None):
+        if user_input is None:
+            return self.async_show_form(step_id="confirm")
+
+        return self.async_create_entry(
+            title=self._discovered_data[CONF_NAME],
+            data=self._discovered_data,
         )
 
 
