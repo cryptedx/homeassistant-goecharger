@@ -27,4 +27,19 @@
 - If the repository has no `vX.Y.Z` tag yet, the first workflow run bootstraps a
   GitHub Release for the current manifest version without incrementing it.
 
+## Documentation
+
+- Keep `README.md` updated for every user-facing change (new entities,
+  discovery flow changes, new config options, diagnostics, or behavior changes).
+- If a change affects integration behavior or setup, update `README.md` in the
+  same task before merging.
+
+## Documentation Checklist
+
+- [ ] `README.md` reflects behavior/feature changes introduced in this task.
+- [ ] Setup or behavior docs mention any new config fields or options.
+- [ ] Tests required for changed logic were run before committing.
+- [ ] Translation updates were made where user-facing text changed.
+- [ ] Release-impacting changes are covered by a conventional commit type.
+
 Run `python3 -m unittest discover -s tests -v` before committing.

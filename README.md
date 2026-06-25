@@ -27,6 +27,11 @@ the original upstream project. The Home Assistant integration domain remains
   dedicated entity.
 - Optional correction factor for older devices that report slightly low voltage
   and energy values.
+- LAN auto-discovery via zeroconf/mDNS.
+- Binary sensor entities for charger states.
+- Sensor metadata includes proper Home Assistant sensor device classes.
+- Diagnostics export for easy troubleshooting.
+- API version auto-detect in config flow for easier setup.
 
 ## Installation
 
@@ -97,9 +102,11 @@ Create an `input_select.ev_charging_mode` helper with these options:
 - `Off`
 - `Immediate`
 - `PV surplus`
+- `Departure`
 
 Then adapt the placeholder entity IDs to your charger name. This example assumes
-the charger is named `charger1`.
+the charger is named `charger1` and uses a signed grid sensor where negative
+values mean export to the grid.
 
 ```yaml
 - id: goamplocal_bev_mode_template
@@ -109,11 +116,15 @@ the charger is named `charger1`.
     - trigger: state
       entity_id:
         - input_select.ev_charging_mode
-        - binary_sensor.ev_connected
+        - sensor.house_grid_power
+        - sensor.goecharger_charger1_car_status
   conditions:
     - condition: state
-      entity_id: binary_sensor.ev_connected
-      state: "on"
+      entity_id: sensor.goecharger_charger1_car_status
+      state:
+        - "charging"
+        - "Waiting for vehicle"
+        - "charging finished, vehicle still connected"
   actions:
     - choose:
         - conditions:
@@ -121,11 +132,9 @@ the charger is named `charger1`.
               entity_id: input_select.ev_charging_mode
               state: "Off"
           sequence:
-            - action: select.select_option
+            - action: switch.turn_off
               target:
-                entity_id: select.goecharger_charger1_force_state
-              data:
-                option: "Off"
+                entity_id: switch.goecharger_charger1_allow_charging
 
         - conditions:
             - condition: state
@@ -140,32 +149,77 @@ the charger is named `charger1`.
                 entity_id: number.goecharger_charger1_charger_max_current
               data:
                 value: 16
+            - action: switch.turn_on
+              target:
+                entity_id: switch.goecharger_charger1_allow_charging
+
+        - conditions:
+            - condition: state
+              entity_id: input_select.ev_charging_mode
+              state: "Departure"
+          sequence:
+            - action: switch.turn_off
+              target:
+                entity_id: switch.goecharger_charger1_pv_surplus
             - action: select.select_option
               target:
-                entity_id: select.goecharger_charger1_force_state
+                entity_id: select.goecharger_charger1_phase_wish_mode
               data:
-                option: "On"
+                option: "Wish 3"
+            - action: number.set_value
+              target:
+                entity_id: number.goecharger_charger1_charger_max_current
+              data:
+                value: 10
+            - action: switch.turn_on
+              target:
+                entity_id: switch.goecharger_charger1_allow_charging
 
         - conditions:
             - condition: state
               entity_id: input_select.ev_charging_mode
               state: "PV surplus"
           sequence:
-            - action: switch.turn_on
-              target:
-                entity_id: switch.goecharger_charger1_pv_surplus
-            - action: select.select_option
-              target:
-                entity_id: select.goecharger_charger1_force_state
-              data:
-                option: "On"
+            - choose:
+                - conditions:
+                    - condition: numeric_state
+                      entity_id: sensor.house_grid_power
+                      below: -1500
+                  sequence:
+                    - action: switch.turn_on
+                      target:
+                        entity_id: switch.goecharger_charger1_pv_surplus
+                    - action: select.select_option
+                      target:
+                        entity_id: select.goecharger_charger1_phase_wish_mode
+                      data:
+                        option: "Wish 1"
+                    - action: number.set_value
+                      target:
+                        entity_id: number.goecharger_charger1_charger_max_current
+                      data:
+                        value: 6
+                    - action: switch.turn_on
+                      target:
+                        entity_id: switch.goecharger_charger1_allow_charging
+                - conditions:
+                    - condition: numeric_state
+                      entity_id: sensor.house_grid_power
+                      above: 500
+                  sequence:
+                    - action: switch.turn_off
+                      target:
+                        entity_id: switch.goecharger_charger1_allow_charging
 ```
 
-This is a small mode switch, not a full charging optimizer. Use evcc or another
-dedicated controller if you need tariff-aware plans, battery coordination, or
-advanced load management.
+This mirrors a small Home Assistant driven setup: one mode helper, charger-local
+controls, house power as the PV signal, and no vehicle-specific SoC assumptions.
+Use evcc or another dedicated controller if you need tariff-aware plans, battery
+coordination, or advanced load management.
 
 ## Development
+
+- Keep `README.md` up to date for every user-facing integration change.
 
 Run the test suite before committing:
 
