@@ -38,7 +38,7 @@ API_VALUE_ATTR = "value"
 
 MIN_UPDATE_INTERVAL = timedelta(seconds=10)
 DEFAULT_UPDATE_INTERVAL = timedelta(seconds=20)
-PLATFORMS = ["sensor", "switch", "number", "select"]
+PLATFORMS = ["sensor", "switch", "number", "select", "binary_sensor"]
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -388,7 +388,7 @@ async def async_setup(hass: core.HomeAssistant, config: dict) -> bool:
     hass.services.async_register(DOMAIN, "set_charge_limit", async_handle_set_charge_limit)
     hass.services.async_register(DOMAIN, "set_api_key", async_handle_set_api_key)
 
-    for platform in ("sensor", "switch", "number", "select"):
+    for platform in PLATFORMS:
         hass.async_create_task(async_load_platform(
             hass, platform, DOMAIN, {CONF_CHARGERS: chargers, CHARGER_API: chargerApi}, config)
         )
