@@ -21,6 +21,9 @@
             }
         },
         "abort": {
+        },
+        "error": {
+            "cannot_connect": "Cannot connect to charger"
         }
     },
     "services": {

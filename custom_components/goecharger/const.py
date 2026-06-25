@@ -11,10 +11,15 @@ CHARGER_API = "charger_api"
 
 API_VERSION_V1 = "v1"
 API_VERSION_V2 = "v2"
+API_VERSION_AUTO = "auto"
 DEFAULT_API_VERSION = API_VERSION_V1
 API_VERSIONS = {
     API_VERSION_V1: "v1",
     API_VERSION_V2: "v2 (recommended)",
+}
+API_VERSION_OPTIONS = {
+    API_VERSION_AUTO: "Auto-detect",
+    **API_VERSIONS,
 }
 
 _INVALID_ENTITY_ID_CHARS = re.compile(r"[^a-z0-9_]+")
