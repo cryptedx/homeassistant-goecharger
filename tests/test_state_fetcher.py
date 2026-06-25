@@ -28,7 +28,10 @@ homeassistant = _install_module("homeassistant", types.ModuleType("homeassistant
 homeassistant.const = _install_module("homeassistant.const", types.ModuleType("homeassistant.const"))
 homeassistant.const.CONF_HOST = "host"
 homeassistant.const.CONF_SCAN_INTERVAL = "scan_interval"
+homeassistant.const.UnitOfElectricCurrent = types.SimpleNamespace(AMPERE="A")
+homeassistant.const.UnitOfElectricPotential = types.SimpleNamespace(VOLT="V")
 homeassistant.const.UnitOfEnergy = types.SimpleNamespace(KILO_WATT_HOUR="kWh")
+homeassistant.const.UnitOfPower = types.SimpleNamespace(KILO_WATT="kW")
 homeassistant.const.UnitOfTemperature = types.SimpleNamespace(CELSIUS="C")
 homeassistant.core = _install_module("homeassistant.core", types.ModuleType("homeassistant.core"))
 homeassistant.core.HomeAssistant = object
@@ -43,9 +46,18 @@ homeassistant.components = _install_module(
 homeassistant.components.sensor = _install_module(
     "homeassistant.components.sensor", types.ModuleType("homeassistant.components.sensor")
 )
-homeassistant.components.sensor.SensorDeviceClass = types.SimpleNamespace(ENERGY="energy")
+homeassistant.components.sensor.SensorDeviceClass = types.SimpleNamespace(
+    CURRENT="current",
+    ENERGY="energy",
+    POWER="power",
+    TEMPERATURE="temperature",
+    VOLTAGE="voltage",
+)
 homeassistant.components.sensor.SensorEntity = object
-homeassistant.components.sensor.SensorStateClass = types.SimpleNamespace(TOTAL_INCREASING="total_increasing")
+homeassistant.components.sensor.SensorStateClass = types.SimpleNamespace(
+    MEASUREMENT="measurement",
+    TOTAL_INCREASING="total_increasing",
+)
 homeassistant.components.switch = _install_module(
     "homeassistant.components.switch", types.ModuleType("homeassistant.components.switch")
 )

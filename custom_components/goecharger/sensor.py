@@ -1,8 +1,11 @@
 """Platform for go-eCharger sensor integration."""
 import logging
 from homeassistant.const import (
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
     UnitOfTemperature,
-    UnitOfEnergy
+    UnitOfEnergy,
+    UnitOfPower,
 )
 
 from homeassistant import core, config_entries
@@ -17,13 +20,23 @@ from homeassistant.components.sensor import (
 from .const import CHARGER_API, CONF_CHARGERS, DOMAIN, CONF_NAME, CONF_CORRECTION_FACTOR, charger_entity_id
 from .api import GoeChargerV2
 
-AMPERE = 'A'
-VOLT = 'V'
-UnitOfEnergy.KILO_WATT = 'kW'
 CARD_ID = 'Card ID'
 PERCENT = '%'
 
 _LOGGER = logging.getLogger(__name__)
+
+_POWER_SENSORS = ('p_l1', 'p_l2', 'p_l3', 'p_n', 'p_all', 'p_grid', 'p_pv', 'p_akku')
+_VOLTAGE_SENSORS = ('u_l1', 'u_l2', 'u_l3', 'u_n')
+_CURRENT_SENSORS = (
+    'i_l1',
+    'i_l2',
+    'i_l3',
+    'charger_max_current',
+    'charger_absolute_max_current',
+    'cable_max_current',
+    'allowed_current',
+)
+_TEMPERATURE_SENSORS = ('charger_temp', 'charger_temp0', 'charger_temp1', 'charger_temp2', 'charger_temp3')
 
 _sensorUnits = {
     'charger_temp': {'unit': UnitOfTemperature.CELSIUS, 'name': 'Charger Temp'},
@@ -31,27 +44,27 @@ _sensorUnits = {
     'charger_temp1': {'unit': UnitOfTemperature.CELSIUS, 'name': 'Charger Temp 1'},
     'charger_temp2': {'unit': UnitOfTemperature.CELSIUS, 'name': 'Charger Temp 2'},
     'charger_temp3': {'unit': UnitOfTemperature.CELSIUS, 'name': 'Charger Temp 3'},
-    'p_l1': {'unit': UnitOfEnergy.KILO_WATT, 'name': 'Power L1'},
-    'p_l2': {'unit': UnitOfEnergy.KILO_WATT, 'name': 'Power L2'},
-    'p_l3': {'unit': UnitOfEnergy.KILO_WATT, 'name': 'Power L3'},
-    'p_n': {'unit': UnitOfEnergy.KILO_WATT, 'name': 'Power N'},
-    'p_all': {'unit': UnitOfEnergy.KILO_WATT, 'name': 'Power All'},
+    'p_l1': {'unit': UnitOfPower.KILO_WATT, 'name': 'Power L1'},
+    'p_l2': {'unit': UnitOfPower.KILO_WATT, 'name': 'Power L2'},
+    'p_l3': {'unit': UnitOfPower.KILO_WATT, 'name': 'Power L3'},
+    'p_n': {'unit': UnitOfPower.KILO_WATT, 'name': 'Power N'},
+    'p_all': {'unit': UnitOfPower.KILO_WATT, 'name': 'Power All'},
     'current_session_charged_energy': {'unit': UnitOfEnergy.KILO_WATT_HOUR, 'name': 'Current Session charged'},
     'current_session_charged_energy_corrected': {'unit': UnitOfEnergy.KILO_WATT_HOUR, 'name': 'Current Session charged corrected'},
     'energy_total': {'unit': UnitOfEnergy.KILO_WATT_HOUR, 'name': 'Total Charged'},
     'energy_total_corrected': {'unit': UnitOfEnergy.KILO_WATT_HOUR, 'name': 'Total Charged corrected'},
     'charge_limit': {'unit': UnitOfEnergy.KILO_WATT_HOUR, 'name': 'Charge limit'},
-    'u_l1': {'unit': VOLT, 'name': 'Voltage L1'},
-    'u_l2': {'unit': VOLT, 'name': 'Voltage L2'},
-    'u_l3': {'unit': VOLT, 'name': 'Voltage L3'},
-    'u_n': {'unit': VOLT, 'name': 'Voltage N'},
-    'i_l1': {'unit': AMPERE, 'name': 'Current L1'},
-    'i_l2': {'unit': AMPERE, 'name': 'Current L2'},
-    'i_l3': {'unit': AMPERE, 'name': 'Current L3'},
-    'charger_max_current': {'unit': AMPERE, 'name': 'Charger max current setting'},
-    'charger_absolute_max_current': {'unit': AMPERE, 'name': 'Charger absolute max current setting'},
+    'u_l1': {'unit': UnitOfElectricPotential.VOLT, 'name': 'Voltage L1'},
+    'u_l2': {'unit': UnitOfElectricPotential.VOLT, 'name': 'Voltage L2'},
+    'u_l3': {'unit': UnitOfElectricPotential.VOLT, 'name': 'Voltage L3'},
+    'u_n': {'unit': UnitOfElectricPotential.VOLT, 'name': 'Voltage N'},
+    'i_l1': {'unit': UnitOfElectricCurrent.AMPERE, 'name': 'Current L1'},
+    'i_l2': {'unit': UnitOfElectricCurrent.AMPERE, 'name': 'Current L2'},
+    'i_l3': {'unit': UnitOfElectricCurrent.AMPERE, 'name': 'Current L3'},
+    'charger_max_current': {'unit': UnitOfElectricCurrent.AMPERE, 'name': 'Charger max current setting'},
+    'charger_absolute_max_current': {'unit': UnitOfElectricCurrent.AMPERE, 'name': 'Charger absolute max current setting'},
     'cable_lock_mode': {'unit': '', 'name': 'Cable lock mode'},
-    'cable_max_current': {'unit': AMPERE, 'name': 'Cable max current'},
+    'cable_max_current': {'unit': UnitOfElectricCurrent.AMPERE, 'name': 'Cable max current'},
     'unlocked_by_card': {'unit': CARD_ID, 'name': 'Card used'},
     'lf_l1': {'unit': PERCENT, 'name': 'Power factor L1'},
     'lf_l2': {'unit': PERCENT, 'name': 'Power factor L2'},
@@ -61,25 +74,33 @@ _sensorUnits = {
 }
 _v2SensorUnits = {
     'model_status': {'unit': '', 'name': 'Model status'},
-    'allowed_current': {'unit': AMPERE, 'name': 'Allowed current'},
+    'allowed_current': {'unit': UnitOfElectricCurrent.AMPERE, 'name': 'Allowed current'},
     'force_single_phase': {'unit': '', 'name': 'Force single phase'},
-    'p_grid': {'unit': UnitOfEnergy.KILO_WATT, 'name': 'Grid power'},
-    'p_pv': {'unit': UnitOfEnergy.KILO_WATT, 'name': 'PV power'},
-    'p_akku': {'unit': UnitOfEnergy.KILO_WATT, 'name': 'Battery power'},
+    'p_grid': {'unit': UnitOfPower.KILO_WATT, 'name': 'Grid power'},
+    'p_pv': {'unit': UnitOfPower.KILO_WATT, 'name': 'PV power'},
+    'p_akku': {'unit': UnitOfPower.KILO_WATT, 'name': 'Battery power'},
 }
 
 _sensorStateClass = {
     'energy_total': SensorStateClass.TOTAL_INCREASING,
     'energy_total_corrected': SensorStateClass.TOTAL_INCREASING,
     'current_session_charged_energy': SensorStateClass.TOTAL_INCREASING,
-    'current_session_charged_energy_corrected': SensorStateClass.TOTAL_INCREASING
+    'current_session_charged_energy_corrected': SensorStateClass.TOTAL_INCREASING,
+    **{
+        sensor: SensorStateClass.MEASUREMENT
+        for sensor in _POWER_SENSORS + _VOLTAGE_SENSORS + _CURRENT_SENSORS + _TEMPERATURE_SENSORS
+    },
 }
 
 _sensorDeviceClass = {
     'energy_total': SensorDeviceClass.ENERGY,
     'energy_total_corrected': SensorDeviceClass.ENERGY,
     'current_session_charged_energy': SensorDeviceClass.ENERGY,
-    'current_session_charged_energy_corrected': SensorDeviceClass.ENERGY
+    'current_session_charged_energy_corrected': SensorDeviceClass.ENERGY,
+    **{sensor: SensorDeviceClass.POWER for sensor in _POWER_SENSORS},
+    **{sensor: SensorDeviceClass.VOLTAGE for sensor in _VOLTAGE_SENSORS},
+    **{sensor: SensorDeviceClass.CURRENT for sensor in _CURRENT_SENSORS},
+    **{sensor: SensorDeviceClass.TEMPERATURE for sensor in _TEMPERATURE_SENSORS},
 }
 
 _sensors = [
