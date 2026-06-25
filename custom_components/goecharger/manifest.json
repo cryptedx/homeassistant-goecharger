@@ -13,11 +13,11 @@
   "requirements": [
     "goecharger==0.1.0"
   ],
+  "version": "0.30.1",
   "zeroconf": [
     {
       "type": "_http._tcp.local.",
       "name": "go-echarger*"
     }
-  ],
-  "version": "0.30.1"
+  ]
 }
