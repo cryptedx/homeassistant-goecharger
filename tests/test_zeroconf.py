@@ -92,6 +92,7 @@ class ZeroconfTests(unittest.TestCase):
 
     def config_flow_module(self):
         _install_homeassistant_stubs()
+        sys.modules.pop("custom_components.goecharger.config_flow", None)
         return importlib.import_module("custom_components.goecharger.config_flow")
 
     def test_manifest_advertises_go_echarger_http_zeroconf(self):
