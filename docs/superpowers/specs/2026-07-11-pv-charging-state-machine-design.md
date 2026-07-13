@@ -55,8 +55,9 @@ restarts. A new trigger must not cancel or accidentally reset dwell periods.
   charge-limit context only.
 - Target 900 W of grid export. Grid import is never an operating target.
 - Treat 600 to 1,200 W export as a no-change deadband around the 900 W target.
-- Increase requested current by no more than 1 A per minute and only when export
-  exceeds 1,200 W.
+- On the one-minute control tick, increase requested current directly by the
+  whole number of amperes that still leaves the 900 W export reserve. Do not
+  increase when the available surplus cannot supply a complete ampere.
 - Reduce requested current when export falls below 600 W.
 - Reduce current immediately by the number of amperes required to recover the
   reserve; downward regulation is not limited to 1 A per minute.
@@ -90,7 +91,7 @@ restarts. A new trigger must not cancel or accidentally reset dwell periods.
   least 5,000 W continuously for five minutes.
 - Permit a downshift to one phase when controllable charging power is below
   4,200 W continuously for five minutes.
-- Enforce at least 15 minutes between phase changes.
+- Enforce at least five minutes between phase changes.
 - A phase change may briefly pause charging as required by go-e, but it must not
   be treated as a PV stop or start a ten-minute cooldown.
 
@@ -126,6 +127,6 @@ restarts. A new trigger must not cancel or accidentally reset dwell periods.
    while SoC is below 90 percent, and restarts only after three minutes of
    sufficient PV export.
 11. Verify phase switching respects both five-minute dwell times and the
-   15-minute phase-change lockout.
+   five-minute phase-change lockout.
 12. Keep the Home Assistant charging explainer synchronized with the final live
    thresholds and behavior.

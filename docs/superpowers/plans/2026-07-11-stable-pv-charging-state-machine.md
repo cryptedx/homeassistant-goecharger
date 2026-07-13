@@ -394,7 +394,8 @@ when the calculated current must decrease:
 
 ```text
 If net power is valid, write go-e amp=requested_a.
-If requested_a > current_a, only the one-minute tick may increase it by 1 A.
+If requested_a > current_a, the one-minute tick may add every whole ampere
+that still leaves the 900 W reserve.
 If requested_a < current_a, apply the full calculated reduction immediately on
 the next house-power update.
 Keep frc=2 while regulation continues.
@@ -429,7 +430,7 @@ Candidate no longer matches current power
 
 phase_confirmed + candidate still matches + phase lockout idle
   -> frc=1; wait 8 seconds; write psm (1 or 2); update phase target;
-     wait 8 seconds; write amp=requested_a; frc=2; start 15-minute lockout;
+     wait 8 seconds; write amp=requested_a; frc=2; start five-minute lockout;
      candidate Keine
 ```
 
@@ -523,11 +524,12 @@ the next session and confirm:
 ```text
 Start only after three minutes at >=2700 W export.
 Unknown Tesla data does not block the guarded start.
-Current increases by <=1 A/min and may decrease by multiple A immediately.
+Current rises on the next minute tick to the largest safe whole-ampere value
+and may decrease by multiple A immediately.
 The 600–1200 W export deadband causes no writes beyond the unchanged current.
 Grid import >100 W at one phase/6 A must persist 30 seconds before stop.
 Cooldown blocks restart for ten minutes.
-Phase candidate persists five minutes and phase changes are 15 minutes apart.
+Phase candidate persists five minutes and phase changes are five minutes apart.
 Tesla reaches its live limit and then remains off.
 ```
 
