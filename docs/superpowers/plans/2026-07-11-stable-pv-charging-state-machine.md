@@ -239,6 +239,9 @@ triggers:
     minutes: /1
     id: tick
   - trigger: state
+    entity_id: sensor.haus_smart_meter_leistung
+    id: house_power_changed
+  - trigger: state
     entity_id: binary_sensor.goecharger_go_e_charger_links_charging
     to: "on"
     id: charging_started
@@ -334,7 +337,7 @@ variables:
   tesla_limit: "{{ states('number.garage_model_3_premium_rwd_2026_ladelimit') | float(0) }}"
   tesla_complete: >-
     {{ (tesla_soc_valid and tesla_limit_valid and tesla_soc >= tesla_limit)
-       or ((not tesla_soc_valid or not tesla_limit_valid)
+       or ((not tesla_soc_valid and not tesla_limit_valid)
            and is_state('sensor.garage_model_3_premium_rwd_2026_ladestatus', 'complete')) }}
 ```
 
@@ -381,15 +384,19 @@ startprobe_finished + charging remains off
 ```
 
 Unknown Tesla SoC or limit is not a start-blocking condition.
+`house_power_changed` must process the cancellation immediately; the one-minute
+tick alone is insufficient to prove a continuous three-minute surplus.
 
 - [ ] **Step 6: Implement running current control**
 
-On every `tick` in `Laden` or `Stoppprüfung`:
+On every `tick` in `Laden` or `Stoppprüfung`, and on every house-power update
+when the calculated current must decrease:
 
 ```text
 If net power is valid, write go-e amp=requested_a.
-If requested_a > current_a, the increase is exactly 1 A maximum.
-If requested_a < current_a, apply the full calculated reduction immediately.
+If requested_a > current_a, only the one-minute tick may increase it by 1 A.
+If requested_a < current_a, apply the full calculated reduction immediately on
+the next house-power update.
 Keep frc=2 while regulation continues.
 ```
 
@@ -408,7 +415,7 @@ stop_confirmed + net_w > 100 W + one phase + 6 A
 
 - [ ] **Step 7: Implement phase hysteresis**
 
-On each valid-power tick while state is `Laden`:
+On each valid-power update while state is `Laden`:
 
 ```text
 1 Phase + controllable_w >= 5000 + phase lockout idle
@@ -434,7 +441,7 @@ Set:
 
 ```yaml
 mode: queued
-max: 10
+max: 30
 ```
 
 Write the complete automation through the managed config API using the hash

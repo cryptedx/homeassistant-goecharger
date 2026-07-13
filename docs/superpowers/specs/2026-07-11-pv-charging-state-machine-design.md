@@ -29,7 +29,7 @@ branches:
    has remained above the stop threshold.
 4. `cooldown`: Charging is off and cannot restart until the cooldown expires.
 5. `complete`: Tesla has reached its live charge limit. Tesla's `complete`
-   status is used only when the current SoC or live limit is unavailable.
+   status is used only when both the current SoC and live limit are unavailable.
 
 Persistent Home Assistant helpers or timers shall hold state across automation
 restarts. A new trigger must not cancel or accidentally reset dwell periods.
@@ -39,7 +39,8 @@ restarts. A new trigger must not cancel or accidentally reset dwell periods.
 - `PV-Überschuss` mode must be selected.
 - The vehicle and cable must be connected and the charger must have no error.
 - Start only after grid export is at least 2,700 W continuously for three
-  minutes.
+  minutes. Any relevant power measurement below that threshold immediately
+  cancels and restarts the confirmation.
 - Do not start during the ten-minute cooldown.
 - An unknown Tesla battery state must not block the guarded start. Starting the
   charger is allowed to wake the vehicle so Tesla Fleet can refresh its battery
@@ -71,8 +72,8 @@ restarts. A new trigger must not cancel or accidentally reset dwell periods.
 - A go-e `charging finished, vehicle still connected` state alone must not mark
   the Tesla complete or record a completion state of charge.
 - A valid Tesla SoC at or above the live Tesla charge limit is authoritative
-  completion. Tesla `complete` is a fallback only while SoC or limit data is
-  unavailable.
+  completion. Tesla `complete` is a fallback only while both SoC and limit data
+  are unavailable.
 - When the Tesla charge limit increases while the controller is `complete`, it
   must leave `complete` immediately and return to `waiting`; it may start only
   after the normal three-minute PV-surplus confirmation. A limit decrease that
@@ -115,13 +116,16 @@ restarts. A new trigger must not cancel or accidentally reset dwell periods.
 6. Verify a short cloud or load spike does not stop charging.
 7. Verify import above 100 W for 30 seconds at one phase and 6 A stops charging,
    starts the ten-minute cooldown, and cannot immediately restart.
-8. Verify Tesla reaches its live charge limit and then enters `complete` without
+8. After that cooldown, verify a fresh uninterrupted three-minute export period
+   starts charging again, even when go-e still reports `charging finished,
+   vehicle still connected`.
+9. Verify Tesla reaches its live charge limit and then enters `complete` without
    further start probes.
-9. Raise the Tesla limit from 80 to 90 percent after `complete`; verify the
+10. Raise the Tesla limit from 80 to 90 percent after `complete`; verify the
    controller returns to `waiting`, ignores a stale Tesla `complete` status
    while SoC is below 90 percent, and restarts only after three minutes of
    sufficient PV export.
-10. Verify phase switching respects both five-minute dwell times and the
+11. Verify phase switching respects both five-minute dwell times and the
    15-minute phase-change lockout.
-11. Keep the Home Assistant charging explainer synchronized with the final live
+12. Keep the Home Assistant charging explainer synchronized with the final live
    thresholds and behavior.
