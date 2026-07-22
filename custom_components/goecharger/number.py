@@ -60,7 +60,8 @@ class GoeChargerNumber(CoordinatorEntity, NumberEntity):
         self.entity_id = charger_entity_id("number", chargerName, self._attribute)
         self._attr_unique_id = f"{chargerName}_{self._attribute}"
         self._attr_native_min_value = description["min"]
-        self._attr_native_max_value = description["max"]
+        self._configured_max = description["max"]
+        self._attr_native_max_value = self._configured_max
         self._attr_native_step = description["step"]
         self._attr_native_unit_of_measurement = description["unit"]
 
@@ -79,9 +80,22 @@ class GoeChargerNumber(CoordinatorEntity, NumberEntity):
 
     @property
     def native_value(self):
-        return (self.coordinator.data or {}).get(self._chargername, {}).get(self._attribute)
+        data = (self.coordinator.data or {}).get(self._chargername, {})
+        value = data.get(self._attribute)
+        return 0 if self._api_key == "dwo" and self._attribute in data and value is None else value
+
+    @property
+    def native_max_value(self):
+        if self._api_key not in {"amp", "ama", "mca"}:
+            return self._configured_max
+        data = (self.coordinator.data or {}).get(self._chargername, {})
+        limit_key = "charger_hardware_max_current" if self._api_key == "ama" else "charger_requested_current_limit"
+        limit = data.get(limit_key)
+        return limit if isinstance(limit, (int, float)) else self._configured_max
 
     async def async_set_native_value(self, value):
+        if self._api_key in {"amp", "ama", "mca"} and value > self.native_max_value:
+            raise ValueError(f"{self._attr_name} maximum is {self.native_max_value:g} A")
         if self._api_key == "dwo":
             value = None if value <= 0 else int(value * 1000)
         await self.hass.async_add_executor_job(self._chargerApi.setApiKey, self._api_key, value)

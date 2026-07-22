@@ -5,6 +5,16 @@ Version numbers follow SemVer 2.0.0. The installable integration version lives i
 
 ## Unreleased
 
+- Limit API v2 current controls to the charger hardware, an active 16 A adapter,
+  and the configured absolute maximum instead of always advertising 32 A.
+- Keep the read-only `pwm` phase wish as status and expose writable `psm` phase
+  switching separately when the charger reports it.
+- Keep documented API v2 error states available and map `charger_err` enum names
+  according to charger firmware.
+- Correct API v2 grid, PV, and battery power values from watts to kilowatts.
+- Restore API-key-based values for tuning numbers and represent a disabled
+  charge limit as zero.
+
 ## 0.30.2 - 2026-06-25
 
 - fix: sort manifest keys for hassfest

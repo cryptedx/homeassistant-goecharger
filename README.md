@@ -73,17 +73,41 @@ goecharger:
       correction_factor: 1.05
 ```
 
+## Energy and Statistics
+
+`Total Charged` is the charger lifetime energy total in kWh. Internally this is
+the `energy_total` sensor, and it is exposed with Home Assistant energy metadata
+for long-term statistics and Energy Dashboard use.
+
+`Total Charged corrected` multiplies the same raw total by `correction_factor`.
+Use the corrected sensor only when you intentionally configured a correction
+factor after comparing the charger reading with a trusted external meter.
+
+`Current Session charged` tracks the current charging session, not the lifetime
+charger total.
+
 ## API v2 Controls
 
 API v2 exposes curated Home Assistant entities instead of one entity per raw API
 key:
 
 - `number`: requested current, absolute max current, charge limit, minimum
-  charging current, grid target power, and related tuning values.
+  charging current, grid target power, and related tuning values. Current
+  ranges follow the charger variant, an active 16 A adapter, and the configured
+  absolute maximum instead of always advertising 32 A.
 - `select`: force state, cable lock mode, logic mode, access control, and phase
-  wish mode.
+  switch mode when the charger exposes the writable `psm` key.
 - `switch`: charging allowed, PV surplus, Awattar, zero feed-in, and selected
   simulation switches.
+
+The charger-reported phase wish mode (`pwm`) remains available as a read-only
+sensor. It is separate from the writable phase switch mode (`psm`), whose
+options are `Automatic`, `Single phase`, and `Three phases`.
+
+The API v2 `charger_err` sensor uses the official firmware-specific enum names.
+Existing automations must replace `RCCB` with `FI_AC`, `NO_GROUND` with
+`GND_INVALID`, and `INTERNAL` with `CONTACTOR_MISS`. Explicit internal API
+errors are reported as `INTERNAL` and keep the charger entities available.
 
 For advanced keys, call the expert service:
 
@@ -161,11 +185,6 @@ values mean export to the grid.
             - action: switch.turn_off
               target:
                 entity_id: switch.goecharger_charger1_pv_surplus
-            - action: select.select_option
-              target:
-                entity_id: select.goecharger_charger1_phase_wish_mode
-              data:
-                option: "Wish 3"
             - action: number.set_value
               target:
                 entity_id: number.goecharger_charger1_charger_max_current
@@ -189,11 +208,6 @@ values mean export to the grid.
                     - action: switch.turn_on
                       target:
                         entity_id: switch.goecharger_charger1_pv_surplus
-                    - action: select.select_option
-                      target:
-                        entity_id: select.goecharger_charger1_phase_wish_mode
-                      data:
-                        option: "Wish 1"
                     - action: number.set_value
                       target:
                         entity_id: number.goecharger_charger1_charger_max_current

@@ -126,6 +126,19 @@ class SensorMetadataTests(unittest.TestCase):
         self.assertEqual(sensors["i_l1"]._attr_device_class, "current")
         self.assertEqual(sensors["i_l1"]._attr_state_class, "measurement")
 
+    def test_energy_sensors_have_long_term_statistics_metadata(self):
+        sensors = self._sensors_by_attribute()
+
+        for sensor in (
+            sensors["energy_total"],
+            sensors["energy_total_corrected"],
+            sensors["current_session_charged_energy"],
+            sensors["current_session_charged_energy_corrected"],
+        ):
+            self.assertEqual(sensor.unit_of_measurement, "kWh")
+            self.assertEqual(sensor._attr_device_class, "energy")
+            self.assertEqual(sensor._attr_state_class, "total_increasing")
+
 
 if __name__ == "__main__":
     unittest.main()

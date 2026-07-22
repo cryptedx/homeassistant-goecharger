@@ -24,7 +24,7 @@ V2_SELECTS = {
     "ust": {"name": "Cable lock mode", "attribute": "cable_lock_mode", "options": {"Normal": 0, "Auto unlock": 1, "Always lock": 2}},
     "lmo": {"name": "Logic mode", "attribute": "logic_mode", "options": {"Default": 3, "Awattar": 4, "Automatic stop": 5}},
     "acs": {"name": "Access control", "attribute": "access_control", "options": {"Open": 0, "Wait": 1}},
-    "pwm": {"name": "Phase wish mode", "attribute": "phase_wish_mode", "options": {"Force 3": 0, "Wish 1": 1, "Wish 3": 2}},
+    "psm": {"name": "Phase switch mode", "attribute": "phase_switch_mode", "options": {"Automatic": 0, "Single phase": 1, "Three phases": 2}},
 }
 
 V2_SWITCHES = {
@@ -97,7 +97,9 @@ class GoeChargerV2:
         "nrg",
         "pakku",
         "pgrid",
+        "pgt",
         "ppv",
+        "psm",
         "pwm",
         "sse",
         "su",
@@ -107,24 +109,67 @@ class GoeChargerV2:
         "tof",
         "trx",
         "ust",
+        "var",
         "wh",
         "wst",
         "zfo",
     )
     CAR_STATUS = {
+        0: "error",
         1: "Charger ready, no vehicle",
         2: "charging",
         3: "Waiting for vehicle",
         4: "charging finished, vehicle still connected",
+        5: "error",
     }
-    ERR = {0: "OK", 1: "RCCB", 3: "PHASE", 8: "NO_GROUND", 10: "INTERNAL"}
+    ERR_STABLE = {
+        0: "OK",
+        1: "FI_AC",
+        2: "FI_DC",
+        3: "PHASE",
+        4: "OVERVOLT",
+        5: "OVERAMP",
+        6: "DIODE",
+        7: "PP_INVALID",
+        8: "GND_INVALID",
+        9: "CONTACTOR_STUCK",
+        10: "CONTACTOR_MISS",
+    }
+    ERR_LEGACY = {
+        **ERR_STABLE,
+        12: "STATUS_LOCK_STUCK_OPEN",
+        13: "STATUS_LOCK_STUCK_LOCKED",
+        14: "FI_UNKNOWN",
+        15: "UNKNOWN",
+        16: "OVERTEMP",
+        17: "NO_COMM",
+        18: "CP_INVALID",
+        23: "RDC_SELF_TEST_FAILED",
+    }
+    ERR_CURRENT = {
+        **ERR_STABLE,
+        11: "FI_UNKNOWN",
+        12: "UNKNOWN",
+        13: "OVERTEMP",
+        14: "NO_COMM",
+        15: "STATUS_LOCK_STUCK_OPEN",
+        16: "STATUS_LOCK_STUCK_LOCKED",
+        20: "RESERVED_20",
+        21: "RESERVED_21",
+        22: "RESERVED_22",
+        23: "RESERVED_23",
+        24: "RESERVED_24",
+    }
     ACCESS = {0: "free", 1: "rfid/app"}
+    PHASE_WISH = {0: "Force 3", 1: "Wish 1", 2: "Wish 3"}
 
     def __init__(self, host, open_url=urlopen):
         if not host:
             raise ValueError("host must be specified")
         self.host = host
         self._open_url = open_url
+        self._hardware_max_current = 32
+        self._requested_current_limit = 32
 
     def _get_json(self, path, params):
         url = f"http://{self.host}{path}?{urlencode(params, safe=',')}"
@@ -134,13 +179,35 @@ class GoeChargerV2:
     def _set(self, key, value):
         return self._get_json("/api/set", {key: json.dumps(value)})
 
-    def _clamp_current(self, current):
-        return max(6, min(int(current), 32))
+    def _clamp_current(self, current, maximum):
+        return max(6, min(int(current), maximum))
+
+    def _error_name(self, code, firmware):
+        try:
+            version = tuple(int(part) for part in str(firmware).split(".")[:2])
+            if len(version) < 2:
+                raise ValueError
+        except (TypeError, ValueError):
+            version = None
+        if version is None:
+            mapping = self.ERR_STABLE
+        elif version >= (60, 5):
+            mapping = self.ERR_CURRENT
+        else:
+            mapping = self.ERR_LEGACY
+        return mapping.get(code, "UNKNOWN")
 
     def requestStatus(self):
         status = self._get_json("/api/status", {"filter": ",".join(self.FILTER_KEYS)})
         nrg = status.get("nrg") or []
         tma = status.get("tma") or []
+        self._hardware_max_current = 16 if status.get("var") == 11 or status.get("adi") else 32
+        absolute_limit = status.get("ama")
+        self._requested_current_limit = (
+            min(self._hardware_max_current, int(absolute_limit))
+            if isinstance(absolute_limit, (int, float)) and absolute_limit >= 6
+            else self._hardware_max_current
+        )
 
         def value(values, index, default=0):
             return values[index] if len(values) > index else default
@@ -148,11 +215,16 @@ class GoeChargerV2:
         def kwh(raw):
             return None if raw is None else round(float(raw) / 1000.0, 5)
 
+        def kw(raw):
+            return None if raw is None else round(float(raw) / 1000.0, 3)
+
         data = {
-            "car_status": self.CAR_STATUS.get(status.get("car"), "unknown"),
+            "car_status": "error" if "car" in status and status["car"] is None else self.CAR_STATUS.get(status.get("car"), "unknown"),
             "charger_max_current": int(status.get("amp") or 0),
             "charger_absolute_max_current": int(status.get("ama") or 0),
-            "charger_err": self.ERR.get(status.get("err"), "UNKNOWN"),
+            "charger_hardware_max_current": self._hardware_max_current,
+            "charger_requested_current_limit": self._requested_current_limit,
+            "charger_err": "INTERNAL" if "err" in status and status["err"] is None else self._error_name(status.get("err"), status.get("fwv")),
             "charger_access": self.ACCESS.get(status.get("acs"), "unknown"),
             "allow_charging": "on" if status.get("alw") is True else "off" if status.get("alw") is False else "unknown",
             "stop_mode": "unknown",
@@ -200,29 +272,32 @@ class GoeChargerV2:
             "force_state": status.get("frc"),
             "logic_mode": status.get("lmo"),
             "access_control": status.get("acs"),
-            "phase_wish_mode": status.get("pwm"),
             "model_status": status.get("modelStatus"),
             "allowed_current": status.get("acu"),
             "force_single_phase": status.get("fsp"),
-            "p_grid": status.get("pgrid"),
-            "p_pv": status.get("ppv"),
-            "p_akku": status.get("pakku"),
+            "p_grid": kw(status.get("pgrid")),
+            "p_pv": kw(status.get("ppv")),
+            "p_akku": kw(status.get("pakku")),
             "pv_surplus": "on" if status.get("fup") else "off" if "fup" in status else None,
             "awattar": "on" if status.get("awe") else "off" if "awe" in status else None,
             "zero_feed_in": "on" if status.get("fzf") else "off" if "fzf" in status else None,
             "simulate_unplugging_short": "on" if status.get("su") else "off" if "su" in status else None,
             "simulate_unplugging_always": "on" if status.get("sua") else "off" if "sua" in status else None,
         }
+        if "psm" in status:
+            data["phase_switch_mode"] = status["psm"]
+        if "pwm" in status:
+            data["phase_wish_mode"] = self.PHASE_WISH.get(status["pwm"], "Unknown")
         for key, info in V2_NUMBERS.items():
             if key in status:
-                data[info.get("attribute", info["name"].lower().replace(" ", "_").replace("-", "_"))] = kwh(status[key]) if key == "dwo" else status[key]
+                data[info.get("attribute", key)] = kwh(status[key]) if key == "dwo" else status[key]
         return data
 
     def setTmpMaxCurrent(self, current):
-        return self._set("amp", self._clamp_current(current))
+        return self.setApiKey("amp", current)
 
     def setAbsoluteMaxCurrent(self, current):
-        return self._set("ama", self._clamp_current(current))
+        return self.setApiKey("ama", current)
 
     def setCableLockMode(self, mode):
         return self._set("ust", max(0, min(int(mode), 2)))
@@ -235,6 +310,10 @@ class GoeChargerV2:
         return self._set("frc", 2 if allow else 1)
 
     def setApiKey(self, key, value):
+        if key in ("amp", "mca"):
+            value = self._clamp_current(value, self._requested_current_limit)
+        elif key == "ama":
+            value = self._clamp_current(value, self._hardware_max_current)
         return self._set(key, value)
 
 

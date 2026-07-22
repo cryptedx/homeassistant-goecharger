@@ -136,6 +136,7 @@ class ApiTests(unittest.TestCase):
                     "nrg": [230, 231, 232, 0, 6.1, 6.2, 6.3, 1400, 1410, 1420, 0, 4230, 100, 99, 98, 0],
                     "pgrid": -120.5,
                     "ppv": 820.0,
+                    "pakku": 50.0,
                     "sse": "123456",
                     "ust": 1,
                     "wh": 1500,
@@ -159,8 +160,180 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status["pv_surplus"], "on")
         self.assertEqual(status["logic_mode"], 3)
         self.assertEqual(status["model_status"], 3)
-        self.assertEqual(status["p_grid"], -120.5)
-        self.assertEqual(status["p_pv"], 820.0)
+        self.assertEqual(status["p_grid"], -0.12)
+        self.assertEqual(status["p_pv"], 0.82)
+        self.assertEqual(status["p_akku"], 0.05)
+
+    def test_v2_number_status_fields_match_their_api_keys(self):
+        from custom_components.goecharger.api import GoeChargerV2
+
+        urls = []
+
+        def open_url(request, timeout):
+            urls.append(request.full_url)
+            return FakeResponse(
+                {
+                    "car": 1,
+                    "err": 0,
+                    "mca": 6,
+                    "fst": 1400,
+                    "pgt": -500,
+                    "zfo": 100,
+                }
+            )
+
+        status = GoeChargerV2("192.0.2.10", open_url=open_url).requestStatus()
+
+        self.assertIn("pgt", urls[0])
+        self.assertEqual(
+            {key: status.get(key) for key in ("mca", "fst", "pgt", "zfo")},
+            {"mca": 6, "fst": 1400, "pgt": -500, "zfo": 100},
+        )
+
+    def test_v2_current_limits_follow_hardware_and_configuration(self):
+        from custom_components.goecharger.api import GoeChargerV2
+
+        urls = []
+
+        def open_url(request, timeout):
+            urls.append(request.full_url)
+            return FakeResponse(
+                {"car": 1, "err": 0, "fwv": "60.5", "adi": True, "ama": 16, "var": 22}
+                if "/api/status" in request.full_url
+                else {"ok": True}
+            )
+
+        charger = GoeChargerV2("192.0.2.10", open_url=open_url)
+        status = charger.requestStatus()
+
+        self.assertEqual(status["charger_hardware_max_current"], 16)
+        self.assertEqual(status["charger_requested_current_limit"], 16)
+
+        charger.setTmpMaxCurrent(32)
+        charger.setAbsoluteMaxCurrent(32)
+        charger.setApiKey("mca", 32)
+
+        self.assertIn("/api/set?amp=16", urls[-3])
+        self.assertIn("/api/set?ama=16", urls[-2])
+        self.assertIn("/api/set?mca=16", urls[-1])
+
+        status_32a = GoeChargerV2(
+            "192.0.2.11",
+            open_url=lambda request, timeout: FakeResponse(
+                {"car": 1, "err": 0, "fwv": "60.5", "adi": False, "ama": 32, "var": 22}
+            ),
+        ).requestStatus()
+
+        self.assertEqual(status_32a["charger_hardware_max_current"], 32)
+        self.assertEqual(status_32a["charger_requested_current_limit"], 32)
+
+        status_configured_16a = GoeChargerV2(
+            "192.0.2.12",
+            open_url=lambda request, timeout: FakeResponse(
+                {"car": 1, "err": 0, "fwv": "60.5", "adi": False, "ama": 16, "var": 22}
+            ),
+        ).requestStatus()
+        self.assertEqual(status_configured_16a["charger_hardware_max_current"], 32)
+        self.assertEqual(status_configured_16a["charger_requested_current_limit"], 16)
+
+        status_11kw = GoeChargerV2(
+            "192.0.2.13",
+            open_url=lambda request, timeout: FakeResponse(
+                {"car": 1, "err": 0, "fwv": "60.5", "adi": False, "ama": 32, "var": 11}
+            ),
+        ).requestStatus()
+        self.assertEqual(status_11kw["charger_hardware_max_current"], 16)
+        self.assertEqual(status_11kw["charger_requested_current_limit"], 16)
+
+    def test_v2_phase_status_and_control_are_separate(self):
+        from custom_components.goecharger.api import GoeChargerV2, V2_SELECTS
+
+        urls = []
+
+        def open_url(request, timeout):
+            urls.append(request.full_url)
+            return FakeResponse({"car": 1, "err": 0, "fwv": "60.5", "psm": 2, "pwm": 1})
+
+        status = GoeChargerV2("192.0.2.10", open_url=open_url).requestStatus()
+
+        self.assertIn("psm", urls[0])
+        self.assertIn("pwm", urls[0])
+        self.assertEqual(status["phase_wish_mode"], "Wish 1")
+        self.assertEqual(status["phase_switch_mode"], 2)
+        self.assertNotIn("pwm", V2_SELECTS)
+        self.assertIn("psm", V2_SELECTS)
+
+        missing = GoeChargerV2(
+            "192.0.2.11",
+            open_url=lambda request, timeout: FakeResponse(
+                {"car": 1, "err": 0, "fwv": "60.5"}
+            ),
+        ).requestStatus()
+        self.assertNotIn("phase_switch_mode", missing)
+        self.assertNotIn("phase_wish_mode", missing)
+
+    def test_v2_error_status_and_codes_follow_the_api(self):
+        from custom_components.goecharger.api import GoeChargerV2
+
+        expected_errors = {
+            0: "OK",
+            1: "FI_AC",
+            2: "FI_DC",
+            3: "PHASE",
+            4: "OVERVOLT",
+            5: "OVERAMP",
+            6: "DIODE",
+            7: "PP_INVALID",
+            8: "GND_INVALID",
+            9: "CONTACTOR_STUCK",
+            10: "CONTACTOR_MISS",
+            11: "FI_UNKNOWN",
+            12: "UNKNOWN",
+            13: "OVERTEMP",
+            14: "NO_COMM",
+            15: "STATUS_LOCK_STUCK_OPEN",
+            16: "STATUS_LOCK_STUCK_LOCKED",
+            20: "RESERVED_20",
+            21: "RESERVED_21",
+            22: "RESERVED_22",
+            23: "RESERVED_23",
+            24: "RESERVED_24",
+        }
+
+        for code, expected in expected_errors.items():
+            with self.subTest(code=code):
+                status = GoeChargerV2(
+                    "192.0.2.10",
+                    open_url=lambda request, timeout, code=code: FakeResponse(
+                        {"car": 5, "err": code, "fwv": "60.5"}
+                    ),
+                ).requestStatus()
+                self.assertEqual(status["car_status"], "error")
+                self.assertEqual(status["charger_err"], expected)
+
+    def test_v2_error_codes_follow_firmware(self):
+        from custom_components.goecharger.api import GoeChargerV2
+
+        cases = (
+            ("60.4", 13, "STATUS_LOCK_STUCK_LOCKED"),
+            ("60.4", 16, "OVERTEMP"),
+            ("60.4", 23, "RDC_SELF_TEST_FAILED"),
+            ("60.5", 13, "OVERTEMP"),
+            ("60.5", 16, "STATUS_LOCK_STUCK_LOCKED"),
+            ("60.5", 23, "RESERVED_23"),
+            (None, 13, "UNKNOWN"),
+        )
+
+        for firmware, code, expected in cases:
+            with self.subTest(firmware=firmware, code=code):
+                payload = {"car": 5, "err": code}
+                if firmware is not None:
+                    payload["fwv"] = firmware
+                status = GoeChargerV2(
+                    "192.0.2.10",
+                    open_url=lambda request, timeout, payload=payload: FakeResponse(payload),
+                ).requestStatus()
+                self.assertEqual(status["charger_err"], expected)
 
     def test_v2_writes_existing_controls_and_expert_keys(self):
         from custom_components.goecharger.api import GoeChargerV2
@@ -191,6 +364,7 @@ class ApiTests(unittest.TestCase):
 
         self.assertIn("amp", V2_NUMBERS)
         self.assertIn("frc", V2_SELECTS)
+        self.assertNotIn("pwm", V2_SELECTS)
         self.assertIn("fup", V2_SWITCHES)
 
     def test_integration_uses_adapter_factory(self):

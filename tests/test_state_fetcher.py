@@ -133,6 +133,20 @@ class WorkingCharger:
         return {"car_status": "idle", "p_all": 0}
 
 
+class ApiResponse:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self):
+        return json.dumps(self.payload).encode("utf-8")
+
+
 class StateFetcherTests(unittest.TestCase):
     def test_bad_charger_response_does_not_abort_update(self):
         fetcher = goecharger_integration.ChargerStateFetcher(
@@ -158,6 +172,27 @@ class StateFetcherTests(unittest.TestCase):
         with self.assertLogs(goecharger_integration._LOGGER, level="ERROR"):
             with self.assertRaises(UpdateFailed):
                 asyncio.run(fetcher.fetch_states())
+
+    def test_v2_api_error_states_remain_available(self):
+        chargers = {
+            "unknown_error": goecharger_api.GoeChargerV2(
+                "192.0.2.10",
+                open_url=lambda request, timeout: ApiResponse({"car": 0, "err": 0}),
+            ),
+            "internal_error": goecharger_api.GoeChargerV2(
+                "192.0.2.11",
+                open_url=lambda request, timeout: ApiResponse({"car": None, "err": None}),
+            ),
+        }
+        fetcher = goecharger_integration.ChargerStateFetcher(FakeHass(chargers))
+        fetcher.coordinator = types.SimpleNamespace(data=None)
+
+        data = asyncio.run(fetcher.fetch_states())
+
+        self.assertEqual(data["unknown_error"]["car_status"], "error")
+        self.assertEqual(data["unknown_error"]["charger_err"], "OK")
+        self.assertEqual(data["internal_error"]["car_status"], "error")
+        self.assertEqual(data["internal_error"]["charger_err"], "INTERNAL")
 
     def test_sensor_is_unavailable_without_charger_data(self):
         sensor = goecharger_sensor.GoeChargerSensor(
@@ -275,6 +310,111 @@ class StateFetcherTests(unittest.TestCase):
             len(goecharger_select._create_selects_for_charger(hass, "charger1", goecharger_api.GoeChargerV2("192.0.2.10"))),
             0,
         )
+
+    def test_disabled_v2_charge_limit_is_exposed_as_zero(self):
+        number = goecharger_number.GoeChargerNumber(
+            types.SimpleNamespace(
+                data={"charger1": {"charge_limit": None}},
+                last_update_success=True,
+            ),
+            FakeHass({}),
+            goecharger_api.GoeChargerV2("192.0.2.10"),
+            "charger1",
+            "dwo",
+            goecharger_api.V2_NUMBERS["dwo"],
+        )
+
+        self.assertTrue(number.available)
+        self.assertEqual(number.native_value, 0)
+
+    def test_unavailable_v2_charge_limit_has_no_value(self):
+        number = goecharger_number.GoeChargerNumber(
+            types.SimpleNamespace(data={}, last_update_success=True),
+            FakeHass({}),
+            goecharger_api.GoeChargerV2("192.0.2.10"),
+            "charger1",
+            "dwo",
+            goecharger_api.V2_NUMBERS["dwo"],
+        )
+
+        self.assertFalse(number.available)
+        self.assertIsNone(number.native_value)
+
+    def test_v2_number_enforces_dynamic_current_limit(self):
+        class Coordinator:
+            data = {
+                "charger1": {
+                    "charger_max_current": 6,
+                    "charger_hardware_max_current": 16,
+                    "charger_requested_current_limit": 16,
+                }
+            }
+            last_update_success = True
+
+            async def async_request_refresh(self):
+                return None
+
+        urls = []
+        api = goecharger_api.GoeChargerV2(
+            "192.0.2.10",
+            open_url=lambda request, timeout: (
+                urls.append(request.full_url) or ApiResponse({"ok": True})
+            ),
+        )
+        number = goecharger_number.GoeChargerNumber(
+            Coordinator(),
+            FakeHass({}),
+            api,
+            "charger1",
+            "amp",
+            goecharger_api.V2_NUMBERS["amp"],
+        )
+
+        self.assertEqual(number.native_max_value, 16)
+        with self.assertRaisesRegex(ValueError, "maximum is 16 A"):
+            asyncio.run(number.async_set_native_value(17))
+        self.assertEqual(urls, [])
+
+        asyncio.run(number.async_set_native_value(16))
+        self.assertIn("/api/set?amp=16", urls[0])
+
+    def test_v2_phase_control_writes_psm(self):
+        class Coordinator:
+            data = {"charger1": {"phase_switch_mode": 2, "phase_wish_mode": 1}}
+            last_update_success = True
+
+            async def async_request_refresh(self):
+                return None
+
+        coordinator = Coordinator()
+        urls = []
+        api = goecharger_api.GoeChargerV2(
+            "192.0.2.10",
+            open_url=lambda request, timeout: (
+                urls.append(request.full_url) or ApiResponse({"ok": True})
+            ),
+        )
+        select = goecharger_select.GoeChargerSelect(
+            coordinator,
+            FakeHass({}),
+            api,
+            "charger1",
+            "psm",
+            goecharger_api.V2_SELECTS["psm"],
+        )
+
+        self.assertTrue(select.available)
+        self.assertEqual(select.current_option, "Three phases")
+        asyncio.run(select.async_select_option("Single phase"))
+        self.assertIn("/api/set?psm=1", urls[0])
+
+        hass = types.SimpleNamespace(
+            data={goecharger_integration.DOMAIN: {"coordinator": coordinator}}
+        )
+        sensors = goecharger_sensor._create_sensors_for_charger(
+            "charger1", hass, 1.0, api
+        )
+        self.assertIn("phase_wish_mode", [sensor._attribute for sensor in sensors])
 
 
 if __name__ == "__main__":
