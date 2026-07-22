@@ -5,6 +5,8 @@ Version numbers follow SemVer 2.0.0. The installable integration version lives i
 
 ## Unreleased
 
+## 0.31.0 - 2026-07-22
+
 - Limit API v2 current controls to the charger hardware, an active 16 A adapter,
   and the configured absolute maximum instead of always advertising 32 A.
 - Keep the read-only `pwm` phase wish as status and expose writable `psm` phase
